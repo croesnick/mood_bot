@@ -58,3 +58,11 @@ jobs:
 
     - name: Run Dialyzer
       run: mix dialyzer
+
+    - name: Run basic integration test
+      run: |
+        mix run -e "
+        MoodBot.Display.init_display()
+        MoodBot.Display.clear()
+        MoodBot.Display.show_mood(:happy)
+        "

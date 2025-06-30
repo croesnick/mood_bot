@@ -101,16 +101,35 @@ The MockHAL (`MoodBot.Display.MockHAL`) simulates all hardware operations:
 - **GPIO operations**: Logs pin state changes with descriptions
 - **Busy pin**: Randomly simulates busy/ready states
 - **Sleep**: Actually sleeps to simulate timing
+- **Bitmap saving**: Automatically saves display frames as viewable images
 
 Example mock output:
 
 ```plaintext
-[info] MockHAL: Initializing MockHAL for development mode
+[info] MockHAL: Initializing MockHAL for development mode with bitmap saving enabled (session: a1b2c3d4)
 [info] MockHAL: SPI write 5 bytes: <<1, 2, 3, 4, 5>>
 [info] MockHAL: Set DC pin to 1 (data mode)
-[info] MockHAL: Set RST pin to 0 (active)
+[info] MockHAL: Saved bitmap frame 0 (session: a1b2c3d4)
 [info] MockHAL: Read BUSY pin: 0 (ready)
 ```
+
+#### Visual Display Output
+
+When running in development mode, MoodBot automatically saves visual representations of what would be displayed on the e-ink screen. These bitmap files are saved to `priv/bitmaps/` with filenames like:
+
+```
+session_a1b2c3d4_frame_000_1677123456789.pbm
+session_a1b2c3d4_frame_001_1677123457890.pbm
+```
+
+Each file is a standard PBM (Portable Bitmap) image that can be opened in any image viewer to see exactly what was sent to the display. This makes it easy to:
+
+- Debug display output visually
+- Track the sequence of frames sent to the display
+- Verify mood indicators and custom images look correct
+- See the development history of display changes
+
+The session ID changes each time you restart the application, and the frame counter increments for each image sent to the display.
 
 ## Architecture Overview
 

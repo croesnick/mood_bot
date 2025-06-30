@@ -2,6 +2,11 @@ import Config
 
 # Add configuration that is only needed when running on the host here.
 
+# Display configuration for development
+config :mood_bot, MoodBot.Display,
+  # Enable bitmap saving in development for visual debugging
+  save_bitmaps: true
+
 config :nerves_runtime,
   kv_backend:
     {Nerves.Runtime.KVBackend.InMemory,

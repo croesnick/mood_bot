@@ -106,7 +106,10 @@ defmodule MoodBot.Display do
   @impl true
   def init(opts) do
     # Merge default config with application config and any passed options
-    app_config = Application.get_env(:mood_bot, __MODULE__, %{})
+    app_config =
+      :mood_bot
+      |> Application.get_env(__MODULE__, %{})
+      |> ensure_map()
 
     config =
       @default_config
@@ -257,6 +260,10 @@ defmodule MoodBot.Display do
   end
 
   ## Private Functions
+
+  defp ensure_map(config) when is_map(config), do: config
+  defp ensure_map(config) when is_list(config), do: Enum.into(config, %{})
+  defp ensure_map(_), do: %{}
 
   if Mix.target() == :host do
     defp set_hal_module(config) do

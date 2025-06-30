@@ -12,33 +12,89 @@ defmodule MoodBot.Display.MockHAL do
 
   defstruct [
     :config,
+    :session_id,
     dc_state: 0,
     rst_state: 1,
-    busy_state: 0
+    busy_state: 0,
+    frame_counter: 0,
+    save_bitmaps: false
   ]
 
   @impl true
   def init(config) do
     Logger.debug("Initializing MockHAL with config: #{inspect(config)}")
 
+    session_id = :crypto.strong_rand_bytes(4) |> Base.encode16(case: :lower)
+    save_bitmaps = Map.get(config, :save_bitmaps, true)
+
     state = %__MODULE__{
       config: config,
+      session_id: session_id,
       dc_state: 0,
       rst_state: 1,
-      busy_state: 0
+      busy_state: 0,
+      frame_counter: 0,
+      save_bitmaps: save_bitmaps
     }
 
-    Logger.info("MockHAL initialized for development mode")
+    if save_bitmaps do
+      Logger.info(
+        "MockHAL initialized for development mode with bitmap saving enabled (session: #{session_id})"
+      )
+    else
+      Logger.info("MockHAL initialized for development mode")
+    end
+
     {:ok, state}
   end
 
+  # Expected size for full image data (128 * 296 / 8 = 4736 bytes)
+  @image_data_size 4736
+
   @impl true
   def spi_write(state, data) when is_binary(data) do
+    data_size = byte_size(data)
+
     Logger.debug(
-      "MockHAL: SPI write #{byte_size(data)} bytes: #{inspect(binary_part(data, 0, min(8, byte_size(data))))}..."
+      "MockHAL: SPI write #{data_size} bytes: #{inspect(binary_part(data, 0, min(8, data_size)))}..."
     )
 
-    {:ok, state}
+    new_state = maybe_save_bitmap(state, data)
+
+    {:ok, new_state}
+  end
+
+  # Private helper to detect and save bitmap data
+  defp maybe_save_bitmap(%{save_bitmaps: false} = state, _data), do: state
+
+  defp maybe_save_bitmap(%{save_bitmaps: true} = state, data) do
+    data_size = byte_size(data)
+
+    if data_size == @image_data_size and state.dc_state == 1 do
+      # This looks like image data (correct size and DC pin is in data mode)
+      case save_frame_bitmap(state, data) do
+        :ok ->
+          Logger.info(
+            "MockHAL: Saved bitmap frame #{state.frame_counter} (session: #{state.session_id})"
+          )
+
+          %{state | frame_counter: state.frame_counter + 1}
+
+        {:error, reason} ->
+          Logger.error("MockHAL: Failed to save bitmap: #{reason}")
+          state
+      end
+    else
+      # Not image data (wrong size or in command mode)
+      state
+    end
+  end
+
+  defp save_frame_bitmap(state, data) do
+    alias MoodBot.Display.Bitmap
+
+    filename = Bitmap.generate_filename(state.session_id, state.frame_counter)
+    Bitmap.save_pbm(data, filename)
   end
 
   @impl true
