@@ -20,11 +20,6 @@ updates:
         update-types:
           - "minor"
           - "patch"
-    # Ignore specific dependencies if needed
-    ignore: []
-      # Example: ignore major version updates for breaking changes
-      # - dependency-name: "some-package"
-      #   update-types: ["version-update:semver-major"]
     
   # Enable version updates for GitHub Actions
   - package-ecosystem: "github-actions"
