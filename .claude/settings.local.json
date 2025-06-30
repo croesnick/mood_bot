@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mix test)",
+      "Bash(mix test:*)",
+      "Bash(mix credo:*)",
+      "Bash(mix dialyzer:*)",
+      "Bash(mix format)"
+    ],
+    "deny": []
+  }
+}
