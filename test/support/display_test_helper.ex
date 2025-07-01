@@ -57,6 +57,21 @@ defmodule MoodBot.DisplayTestHelper do
   end
 
   @doc """
+  Creates integration test configuration using MockHAL for realistic behavior.
+  """
+  def integration_config do
+    %{
+      spi_device: "test_spi",
+      dc_pin: 99,
+      rst_pin: 98,
+      busy_pin: 97,
+      cs_pin: 96,
+      hal_module: MoodBot.Display.MockHAL,
+      save_bitmaps: true
+    }
+  end
+
+  @doc """
   Creates a valid test image for the display dimensions.
   """
   def test_image_data do

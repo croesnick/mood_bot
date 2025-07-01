@@ -11,7 +11,7 @@ defmodule MoodBot.DisplayIntegrationTest do
   describe "Full display workflow integration" do
     setup do
       # Start application components needed for integration
-      config = DisplayTestHelper.test_config()
+      config = DisplayTestHelper.integration_config()
 
       test_name = :"display_integration_#{System.unique_integer()}"
       {:ok, pid} = Display.start_link(name: test_name, config: config)
@@ -214,7 +214,7 @@ defmodule MoodBot.DisplayIntegrationTest do
 
   describe "Performance characteristics" do
     setup do
-      config = DisplayTestHelper.test_config()
+      config = DisplayTestHelper.integration_config()
       test_name = :"display_perf_#{System.unique_integer()}"
       {:ok, pid} = Display.start_link(name: test_name, config: config)
 

@@ -266,13 +266,17 @@ defmodule MoodBot.Display do
   defp ensure_map(_), do: %{}
 
   if Mix.target() == :host do
-    defp set_hal_module(config) do
+    defp set_hal_module(%{hal_module: nil} = config) do
       Map.put(config, :hal_module, MockHAL)
     end
+
+    defp set_hal_module(config), do: config
   else
-    defp set_hal_module(config) do
+    defp set_hal_module(%{hal_module: nil} = config) do
       Map.put(config, :hal_module, RpiHAL)
     end
+
+    defp set_hal_module(config), do: config
   end
 
   defp generate_mood_image(mood) do
