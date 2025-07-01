@@ -76,3 +76,7 @@ The project supports multiple embedded targets: `:rpi0`, `:rpi3`, `:rpi3a`, `:rp
 - Use `config/target.exs` for embedded target configuration
 - The preferred CLI target for `run` and `test` is `:host`
 - Firmware includes custom rootfs overlay from `rootfs_overlay/`
+
+## Development Workflow
+
+- At the end of a feature, compile a brief yet complete git commit message. Then ask if you should do the git commit.
