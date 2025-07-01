@@ -79,4 +79,4 @@ The project supports multiple embedded targets: `:rpi0`, `:rpi3`, `:rpi3a`, `:rp
 
 ## Development Workflow
 
-- At the end of a feature, compile a brief yet complete git commit message. Then ask if you should do the git commit.
+- At the end of a feature, compile a brief yet complete git commit message. Use contentional commits with the most suitable tag. Ask if you should do the git commit.
