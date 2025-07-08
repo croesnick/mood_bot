@@ -19,7 +19,7 @@ The application uses a target-conditional architecture where different child pro
 
 ## Development Instructions
 
-- Use the `context7` mcp server to look up Elixir library documentation
+- Use the `hexdocs` mcp server to look up Elixir library documentation
 - Run `mix format` after finishing a feature to ensure consistent code formatting
 - Run `mix credo --strict` and `mix dialyzer` and ensure all findings are dealt with
 - Always check if the usage documented in the README needs to be adjusted
