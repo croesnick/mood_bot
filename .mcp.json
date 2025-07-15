@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "hexdocs": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "hexdocs-mcp@0.6.0"
+      ],
+      "env": {}
+    }
+  }
+}

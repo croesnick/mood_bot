@@ -1,12 +1,17 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mix test)",
-      "Bash(mix test:*)",
       "Bash(mix credo:*)",
+      "Bash(mix deps.get:*)",
       "Bash(mix dialyzer:*)",
-      "Bash(mix format)"
+      "Bash(mix format)",
+      "Bash(mix test:*)",
+      "Bash(mix test)",
+      "mcp__hexdocs__search"
     ],
     "deny": []
-  }
+  },
+  "enabledMcpjsonServers": [
+    "hexdocs"
+  ]
 }
