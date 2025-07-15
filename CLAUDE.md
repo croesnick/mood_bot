@@ -23,6 +23,7 @@ The application uses a target-conditional architecture where different child pro
 - Run `mix format` after finishing a feature to ensure consistent code formatting
 - Run `mix credo --strict` and `mix dialyzer` and ensure all findings are dealt with
 - Always check if the usage documented in the README needs to be adjusted
+- For diagrams, try to use mermaid whenever possible. Ensure the diagrams are simple, to the point, easy to understand, and properly labeled.
 
 ## Development Commands
 
