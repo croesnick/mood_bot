@@ -61,7 +61,7 @@ defmodule MoodBot.MixProject do
       # version updates, please review their release notes in case
       # changes to your application are needed.
       {:nerves_system_rpi0, "~> 1.24", runtime: false, targets: :rpi0},
-      {:nerves_system_rpi3, "~> 1.24", runtime: false, targets: :rpi3},
+      {:nerves_system_rpi3, "~> 1.31", runtime: false, targets: :rpi3},
       {:nerves_system_rpi3a, "~> 1.24", runtime: false, targets: :rpi3a},
       {:nerves_system_rpi4, "~> 1.24", runtime: false, targets: :rpi4},
       {:nerves_system_rpi5, "~> 0.2", runtime: false, targets: :rpi5},
