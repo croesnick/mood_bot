@@ -330,9 +330,141 @@ mix firmware
 # Burn to SD card (replace /dev/sdX with your card)
 mix burn
 
-# Upload to running device over network
+# Upload to running device over network (OTA update)
 mix upload
 ```
+
+## Over-The-Air (OTA) Updates
+
+**Learning objective**: After this section, you'll understand how to update your deployed MoodBot remotely without physical access to the SD card.
+
+Once you've deployed MoodBot to hardware, you can update it remotely using Nerves' built-in OTA capabilities. This is especially useful when your robot is deployed or hard to reach physically.
+
+### Prerequisites for OTA Updates
+
+1. **Network connectivity**: Your MoodBot must be connected to WiFi or Ethernet
+2. **SSH access**: The device runs an SSH server for secure updates
+3. **Initial deployment**: You need to burn the initial firmware to SD card first
+
+### How OTA Updates Work
+
+MoodBot uses SSH-based OTA updates through the `nerves_ssh` library:
+
+1. Your development machine connects to MoodBot over the network
+2. New firmware is transferred securely via SSH
+3. Nerves applies the update using A/B partition swapping
+4. The device reboots into the new firmware
+5. If something goes wrong, it can automatically rollback
+
+### Network Discovery
+
+MoodBot advertises itself on the local network as `nerves.local` via mDNS. You can also connect directly via IP address.
+
+```bash
+# Connect to the device
+ssh nerves.local
+
+# Or find the IP and connect directly
+ssh 192.168.1.100
+```
+
+### Updating via mix upload
+
+The simplest way to update your deployed MoodBot:
+
+```bash
+# Set your target environment
+export MIX_TARGET=rpi4
+
+# Build new firmware
+mix firmware
+
+# Upload to the running device
+mix upload
+
+# Specify device if multiple devices are present
+mix upload --target nerves.local
+mix upload --target 192.168.1.100
+```
+
+The upload process:
+1. Transfers the new firmware file to the device
+2. Applies the update to the inactive partition
+3. Switches to the new partition on next reboot
+4. Automatically reboots the device
+
+### Manual OTA Updates
+
+For more control, you can manually apply updates:
+
+```bash
+# Connect to the device
+ssh nerves.local
+
+# Check current firmware info
+iex> Nerves.Runtime.KV.get_all()
+
+# Upload firmware file separately (via scp, sftp, etc.)
+scp mood_bot.fw nerves.local:/data/
+
+# Apply the update manually
+iex> cmd("fwup -i /data/mood_bot.fw --apply --task upgrade " <>
+         "--no-unmount -d #{Nerves.Runtime.KV.get("nerves_fw_devpath")}")
+
+# Reboot to new firmware
+iex> reboot()
+```
+
+### SSH Authentication
+
+MoodBot automatically discovers SSH public keys from your `~/.ssh` directory. If no keys are found, you'll need to add them:
+
+```bash
+# During development - keys are discovered automatically
+ls ~/.ssh/id_*.pub
+
+# Add keys at runtime if needed
+iex> NervesSSH.add_authorized_key("ssh-rsa AAAAB3N...")
+
+# Or set via environment before building
+export NERVES_SSH_AUTHORIZED_KEYS="ssh-rsa AAAAB3N...your-key-here"
+mix firmware
+```
+
+### Firmware Patches (Advanced)
+
+For bandwidth-limited deployments, Nerves supports delta updates that only transfer changes:
+
+```bash
+# Generate a patch from old to new firmware  
+mix firmware.patch --source old_firmware.fw --target new_firmware.fw
+
+# Upload the much smaller patch file
+mix upload --firmware patch.fw
+```
+
+This can reduce update sizes from ~20MB to ~4MB depending on changes.
+
+### Troubleshooting OTA Updates
+
+**Can't connect to device:**
+- Verify device is on network: `ping nerves.local`
+- Check SSH service: `ssh nerves.local` should prompt for authentication
+- Verify your SSH key is authorized
+
+**Upload fails:**
+- Ensure enough free space: `df -h` on device  
+- Check network stability during large transfers
+- Try manual upload via `scp` first
+
+**Device won't boot after update:**
+- Nerves automatically rolls back failed updates
+- Connect via serial console if available
+- Check logs: `dmesg` or `journalctl`
+
+**Multiple devices on network:**
+- Use specific IP instead of `nerves.local`
+- Each device has unique hostname: `nerves-<serial>.local`
 
 ## Configuration
 
