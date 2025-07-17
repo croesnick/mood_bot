@@ -23,3 +23,5 @@ erl_crash.dump
 
 # Environment variables file - may contain sensitive information
 .env
+
+.claude/history

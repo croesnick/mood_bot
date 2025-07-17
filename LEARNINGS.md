@@ -181,3 +181,76 @@ config :mdns_lite,
 - **Graceful handling** of network disconnections
 
 **Key Insight:** VintageNet's approach of complete teardown/rebuild simplifies state management while the persistence layer ensures configurations survive reboots. This differs significantly from incremental state machine approaches used in previous networking libraries.
+
+## Remote Debugging with SSH MCP for Nerves
+
+### Challenge: Interactive IEx vs Non-Interactive SSH Commands
+
+**Problem:** Nerves debugging typically uses interactive IEx sessions with Toolshed helpers like `wifi_status()`, `ifconfig`, etc. However, SSH MCP executes discrete commands without maintaining IEx session state.
+
+**Solution:** Use direct Elixir evaluation with `iex -e 'command' --no-halt` pattern to execute debugging commands non-interactively.
+
+### SSH MCP Server Setup
+
+**Repository:** https://github.com/tufantunc/ssh-mcp
+
+**Capabilities:**
+- MCP-compliant server for executing shell commands over SSH
+- Secure authentication (password or SSH key) 
+- Configurable command timeouts
+- Direct integration with Claude Code for automated debugging
+
+### Direct Elixir Evaluation Patterns
+
+**Network Overview:**
+```bash
+ssh nerves.local "iex -e 'VintageNet.info' --no-halt"
+```
+
+**WiFi Interface Status:**
+```bash
+ssh nerves.local "iex -e 'VintageNet.get(\"interface.wlan0.state\") |> IO.inspect' --no-halt"
+```
+
+**WiFi Configuration:**
+```bash
+ssh nerves.local "iex -e 'VintageNet.get_configuration(\"wlan0\") |> IO.inspect' --no-halt"
+```
+
+**Available WiFi Networks:**
+```bash
+ssh nerves.local "iex -e 'VintageNet.scan(\"wlan0\") |> IO.inspect' --no-halt"
+```
+
+**All Network Interfaces:**
+```bash
+ssh nerves.local "iex -e 'VintageNet.all_interfaces() |> IO.inspect' --no-halt"
+```
+
+**WiFi Status Equivalent (Toolshed replacement):**
+```bash
+ssh nerves.local "iex -e 'interfaces = VintageNet.all_interfaces(); wifi_interfaces = Enum.filter(interfaces, &String.starts_with?(&1, \"wlan\")); Enum.each(wifi_interfaces, fn iface -> IO.puts(\"#{iface}: #{inspect(VintageNet.get_configuration(iface))}\") end)' --no-halt"
+```
+
+### Error Handling in Non-Interactive Commands
+
+**Safe Command Execution with Error Handling:**
+```bash
+ssh nerves.local "iex -e 'try do; VintageNet.get_configuration(\"wlan0\") |> IO.inspect; rescue e -> IO.inspect({:error, e}); end' --no-halt"
+```
+
+### Key Advantages
+
+1. **No File Transfers:** Commands are self-contained, no need to upload debugging modules
+2. **Flexible:** Easy to modify commands on the fly during debugging
+3. **SSH MCP Compatible:** Each command is discrete and can be executed via MCP
+4. **No State Dependency:** Each execution is independent, no session state required
+5. **Direct Integration:** Works seamlessly with Claude Code for automated debugging
+
+### Best Practices
+
+- Always use `--no-halt` flag to prevent IEx from starting interactive session
+- Wrap potentially failing commands in try/rescue blocks for robust error handling
+- Use `IO.inspect` for complex data structures to get proper formatting
+- Chain multiple debugging commands in single execution when related
+- Test commands manually first before integrating with SSH MCP automation

@@ -10,11 +10,18 @@
       "Bash(MIX_TARGET=rpi3 mix firmware)",
       "mcp__hexdocs__fetch",
       "mcp__hexdocs__search",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(mix compile)",
+      "mcp__ssh-nerves__exec",
+      "Bash(export MIX_TARGET=rpi3)",
+      "Bash(mix upload:*)",
+      "Bash(ping:*)",
+      "Bash(mix firmware:*)"
     ],
     "deny": []
   },
   "enabledMcpjsonServers": [
-    "hexdocs"
+    "hexdocs",
+    "ssh-nerves"
   ]
 }

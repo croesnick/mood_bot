@@ -9,6 +9,9 @@ defmodule MoodBot.WiFiConfig do
   """
 
   require Logger
+  
+  # Store target at compile time since Mix.target() is not available at runtime
+  @target Mix.target()
 
   @doc """
   Configure WiFi using environment variables.
@@ -33,7 +36,7 @@ defmodule MoodBot.WiFiConfig do
     case {System.get_env("WIFI_SSID"), System.get_env("WIFI_PSK")} do
       {ssid, psk} when is_binary(ssid) and is_binary(psk) ->
         Logger.info("WiFi: Configuring from environment variables")
-        configure_wifi_impl(Mix.target(), ssid, psk, persist: true)
+        configure_wifi_impl(@target, ssid, psk, persist: true)
 
       _ ->
         {:error, "WIFI_SSID and WIFI_PSK environment variables not set"}
@@ -49,7 +52,7 @@ defmodule MoodBot.WiFiConfig do
       {:ok, "WiFi configured for MyNetwork"}
   """
   def configure_wifi(ssid, psk) when is_binary(ssid) and is_binary(psk) do
-    configure_wifi_impl(Mix.target(), ssid, psk, persist: true)
+    configure_wifi_impl(@target, ssid, psk, persist: true)
   end
 
   @doc """
@@ -63,7 +66,7 @@ defmodule MoodBot.WiFiConfig do
       {:ok, "WiFi configured temporarily for GuestNetwork"}
   """
   def configure_wifi_temporary(ssid, psk) when is_binary(ssid) and is_binary(psk) do
-    configure_wifi_impl(Mix.target(), ssid, psk, persist: false)
+    configure_wifi_impl(@target, ssid, psk, persist: false)
   end
 
   @doc """
@@ -75,7 +78,7 @@ defmodule MoodBot.WiFiConfig do
       {:ok, "WiFi disabled"}
   """
   def disable_wifi do
-    disable_wifi_impl(Mix.target())
+    disable_wifi_impl(@target)
   end
 
   @doc """
@@ -94,7 +97,7 @@ defmodule MoodBot.WiFiConfig do
       }
   """
   def status do
-    status_impl(Mix.target())
+    status_impl(@target)
   end
 
   @doc """
@@ -109,7 +112,7 @@ defmodule MoodBot.WiFiConfig do
       ]
   """
   def scan do
-    scan_impl(Mix.target())
+    scan_impl(@target)
   end
 
   @doc """
@@ -207,14 +210,15 @@ defmodule MoodBot.WiFiConfig do
     case VintageNet.get_configuration("wlan0") do
       %{type: VintageNetWiFi} ->
         properties = VintageNet.get_by_prefix(["interface", "wlan0"])
+        properties_map = Enum.into(properties, %{})
 
         %{
           interface: "wlan0",
-          state: get_in(properties, ["interface", "wlan0", "state"]),
-          connection: get_in(properties, ["interface", "wlan0", "connection"]),
-          ssid: get_current_ssid(properties),
-          frequency: get_in(properties, ["interface", "wlan0", "wifi", "frequency"]),
-          signal_percent: get_in(properties, ["interface", "wlan0", "wifi", "signal_percent"])
+          state: Map.get(properties_map, ["interface", "wlan0", "state"]),
+          connection: Map.get(properties_map, ["interface", "wlan0", "connection"]),
+          ssid: get_current_ssid(properties_map),
+          frequency: Map.get(properties_map, ["interface", "wlan0", "wifi", "frequency"]),
+          signal_percent: Map.get(properties_map, ["interface", "wlan0", "wifi", "signal_percent"])
         }
 
       _ ->
@@ -251,8 +255,8 @@ defmodule MoodBot.WiFiConfig do
 
   # Private helper functions
 
-  defp get_current_ssid(properties) do
-    case get_in(properties, ["interface", "wlan0", "wifi", "access_points"]) do
+  defp get_current_ssid(properties_map) do
+    case Map.get(properties_map, ["interface", "wlan0", "wifi", "access_points"]) do
       [%{ssid: ssid} | _] -> ssid
       _ -> nil
     end

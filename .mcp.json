@@ -8,6 +8,19 @@
         "hexdocs-mcp@0.6.0"
       ],
       "env": {}
+    },
+    "ssh-nerves": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "ssh-mcp",
+        "--",
+        "--host=nerves.local",
+        "--user=root",
+        "--key=${HOME}/.ssh/id_rsa"
+      ],
+      "env": {}
     }
   }
 }
