@@ -10,7 +10,9 @@ config :logger, backends: [RingLogger]
 # library documentation for more control in ordering how OTP
 # applications are started and handling failures.
 
-config :shoehorn, init: [:nerves_runtime, :nerves_pack]
+config :shoehorn,
+  init: [:nerves_runtime, :nerves_pack],
+  app: Mix.Project.config()[:app]
 
 # Erlinit can be configured without a rootfs_overlay. See
 # https://github.com/nerves-project/erlinit/ for more information on
@@ -31,11 +33,10 @@ keys =
 
 # If no SSH keys are found, nerves_ssh will still start but users will need to
 # add authorized keys at runtime or use password authentication
-authorized_keys = 
+authorized_keys =
   if keys == [] do
-    IO.puts("No SSH public keys found in ~/.ssh - SSH will start without authorized keys")
-    IO.puts("You can add keys at runtime or set a password for authentication")
-    []
+    raise "No SSH public keys found in ~/.ssh/id_rsa.pub, ~/.ssh/id_ecdsa.pub, or ~/.ssh/id_ed25519.pub. " <>
+          "Please generate a key pair using `ssh-keygen` and add it to your .ssh directory."
   else
     Enum.map(keys, &File.read!/1)
   end
@@ -47,11 +48,12 @@ config :nerves_ssh,
 # VintageNet is Nerves' modern networking library that handles all network types:
 # WiFi, Ethernet, cellular, USB networking, and Access Point mode
 #
-# Update regulatory_domain to your 2-letter country code E.g., "US"
+# Regulatory domain is set via REGULATORY_DOMAIN environment variable (defaults to "DE")
+# Set your 2-letter country code E.g., "US", "DE", "GB" in .env file or export REGULATORY_DOMAIN=US
 #
 # See https://github.com/nerves-networking/vintage_net for more information
 config :vintage_net,
-  regulatory_domain: "00",
+  regulatory_domain: System.get_env("REGULATORY_DOMAIN", "DE"),
   config: [
     {"usb0", %{type: VintageNetDirect}},
     {"eth0",
@@ -59,6 +61,7 @@ config :vintage_net,
        type: VintageNetEthernet,
        ipv4: %{method: :dhcp}
      }},
+    # WiFi available - configure at runtime
     {"wlan0", %{type: VintageNetWiFi}}
   ]
 

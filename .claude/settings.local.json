@@ -9,7 +9,8 @@
       "Bash(mix test)",
       "Bash(MIX_TARGET=rpi3 mix firmware)",
       "mcp__hexdocs__fetch",
-      "mcp__hexdocs__search"
+      "mcp__hexdocs__search",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": []
   },

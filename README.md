@@ -287,6 +287,7 @@ The session ID changes each time you restart the application, and the frame coun
 # Get status
 %{initialized: boolean(), display_state: atom(), ...} = MoodBot.Display.status()
 ```
+
 ### Image Format
 
 The display expects binary data where:
@@ -333,6 +334,150 @@ mix burn
 # Upload to running device over network (OTA update)
 mix upload
 ```
+
+### One-Time Firmware Flash Setup
+
+**Learning objective**: After this section, you'll know how to handle Erlang version compatibility and successfully flash firmware to your Raspberry Pi.
+
+The first time you build firmware, you may encounter an Erlang version mismatch between your host system and the target system. Here's how to resolve it:
+
+#### Prerequisites
+
+- `asdf` version manager (install from [asdf-vm.com](https://asdf-vm.com))
+- A MicroSD card (8GB+)
+
+#### Step 1: Check for Version Mismatch
+
+When you run `mix firmware`, you might see this error:
+
+```plaintext
+** (Mix) Major version mismatch between host and target Erlang/OTP versions
+  Host version: 28
+  Target version: 27
+```
+
+This happens because the Nerves system was built with a different Erlang version than your host system.
+
+#### Step 2: Install Compatible Erlang/Elixir Versions
+
+```bash
+# Install Erlang 27 (compatible with current Nerves systems)
+asdf install erlang 27.3.4.1
+
+# Install compatible Elixir version
+asdf install elixir 1.18.4-otp-27
+
+# Set local versions for this project
+asdf set erlang 27.3.4.1
+asdf set elixir 1.18.4-otp-27
+
+# Verify compatibility
+asdf current
+erl -eval "io:format(\"~s~n\", [erlang:system_info(otp_release)]), halt()."
+elixir --version
+```
+
+#### Step 3: Install Nerves Bootstrap
+
+```bash
+# Install the nerves_bootstrap archive
+mix archive.install hex nerves_bootstrap
+```
+
+#### Step 4: Build and Flash
+
+```bash
+# Set your target (rpi3, rpi4, rpi5, etc.)
+export MIX_TARGET=rpi3
+
+# Get dependencies for target
+mix deps.get
+
+# Build firmware
+mix firmware
+
+# Burn to SD card (system will prompt for confirmation)
+mix burn
+```
+
+#### Step 5: Test Hardware
+
+Once the SD card is ready:
+
+1. **Insert SD card** into your Raspberry Pi
+2. **Connect the e-ink display** (see pin connections above)
+3. **Power on** the Pi (wait 30-60 seconds for boot)
+4. **Connect via SSH**: `ssh nerves.local`
+
+**Note**: If you need WiFi, you can either:
+
+- Set `WIFI_SSID` and `WIFI_PSK` environment variables before building firmware
+- Connect via Ethernet first, then configure WiFi using the `wifi_connect()` command
+
+**Important**: The firmware defaults to Germany's regulatory domain (`DE`). If you're in a different country:
+
+1. Copy `.env.example` to `.env`
+2. Set `REGULATORY_DOMAIN` to your [ISO 3166-1 alpha-2 country code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) (e.g., `US`, `GB`, `FR`)
+3. Alternatively, export the environment variable: `export REGULATORY_DOMAIN=US`
+
+This ensures your device can see all available WiFi networks in your region.
+
+#### Step 6: Verify Display Patterns
+
+In the SSH session, test each display pattern using the built-in helper commands:
+
+```elixir
+# MoodBot helper commands are automatically available
+# Type help() to see all available commands
+
+# Initialize the display
+display_init()
+
+# Test each mood pattern
+display_mood(:happy)      # Checkerboard pattern
+display_mood(:sad)        # Vertical lines  
+display_mood(:neutral)    # Horizontal stripes
+display_mood(:angry)      # Diagonal pattern
+display_mood(:surprised)  # Border frame
+
+# Clear the display
+display_clear()
+
+# Check system status
+display_status()
+
+# Configure WiFi if needed
+wifi_scan()
+wifi_connect("YourNetwork", "YourPassword")    # Persistent connection
+wifi_connect_temp("GuestNet", "TempPassword")  # Temporary connection
+wifi_status()
+
+# Monitor network status
+network_status()  # Shows all interfaces (eth0, wlan0, usb0)
+```
+
+Each command should display a distinct visual pattern on the e-ink display, confirming successful hardware integration.
+
+#### Troubleshooting First Flash
+
+**Archive not found error:**
+
+```bash
+mix archive.install hex nerves_bootstrap
+```
+
+**Dependency conflicts:**
+
+```bash
+mix deps.clean --all
+mix deps.get
+```
+
+**SD card not detected:**
+
+- Ensure the card is properly inserted
+- Check with `diskutil list` (macOS) or `lsblk` (Linux)
+- Try a different SD card if issues persist
 
 ## Over-The-Air (OTA) Updates
 
@@ -388,6 +533,7 @@ mix upload --target 192.168.1.100
 ```
 
 The upload process:
+
 1. Transfers the new firmware file to the device
 2. Applies the update to the inactive partition
 3. Switches to the new partition on next reboot
@@ -448,27 +594,227 @@ This can reduce update sizes from ~20MB to ~4MB depending on changes.
 ### Troubleshooting OTA Updates
 
 **Can't connect to device:**
+
 - Verify device is on network: `ping nerves.local`
 - Check SSH service: `ssh nerves.local` should prompt for authentication
 - Verify your SSH key is authorized
 
 **Upload fails:**
+
 - Ensure enough free space: `df -h` on device  
 - Check network stability during large transfers
 - Try manual upload via `scp` first
 
 **Device won't boot after update:**
+
 - Nerves automatically rolls back failed updates
 - Connect via serial console if available
 - Check logs: `dmesg` or `journalctl`
 
 **Multiple devices on network:**
+
 - Use specific IP instead of `nerves.local`
 - Each device has unique hostname: `nerves-<serial>.local`
 
 ## Configuration
 
-### Application Config
+### Environment Variables
+
+MoodBot uses environment variables for configuration to keep sensitive information secure and make deployment flexible:
+
+#### Setting Up Environment Variables
+
+1. **Copy the example file:**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Edit `.env` for your configuration:**
+   ```bash
+   # Required: Set your country's regulatory domain
+   REGULATORY_DOMAIN=DE
+   
+   # Optional: Automatic WiFi connection on boot
+   WIFI_SSID=YourNetworkName
+   WIFI_PSK=YourPassword
+   ```
+
+3. **Available Environment Variables:**
+   - `REGULATORY_DOMAIN`: WiFi regulatory domain (required for proper operation)
+   - `WIFI_SSID`: Network name for automatic connection
+   - `WIFI_PSK`: Network password for automatic connection
+   - `NERVES_SSH_AUTHORIZED_KEYS`: SSH public keys for authentication
+
+#### Security Notes
+
+- The `.env` file is ignored by git to prevent committing sensitive information
+- Use `.env.example` as a template for team members
+- For production, set environment variables directly on the deployment system
+- Never commit actual WiFi passwords or SSH keys to version control
+
+### WiFi Configuration
+
+**Learning objective**: After this section, you'll understand multiple ways to configure WiFi on MoodBot without hardcoding credentials.
+
+MoodBot supports flexible WiFi configuration through several methods, prioritizing security and ease of use:
+
+#### Method 1: Environment Variables (Recommended for Development)
+
+Create a `.env` file or set environment variables before building firmware:
+
+```bash
+# Copy the example file and customize
+cp .env.example .env
+
+# Edit .env to set your configuration:
+# REGULATORY_DOMAIN=US
+# WIFI_SSID=YourNetworkName  
+# WIFI_PSK=YourPassword
+
+# Or export variables directly
+export MIX_TARGET=rpi3
+export REGULATORY_DOMAIN=US
+export WIFI_SSID="YourNetworkName"
+export WIFI_PSK="YourPassword"
+
+# Build and burn firmware
+mix firmware
+mix burn
+```
+
+The device will automatically connect to WiFi on startup if these environment variables are detected.
+
+#### Method 2: Interactive Configuration (Recommended for Production)
+
+Connect to your device via SSH and use the built-in helper commands:
+
+```bash
+# Connect to device
+ssh nerves.local
+
+# Scan for networks
+iex> wifi_scan()
+
+# Connect to a network (persistent - survives reboots)
+iex> wifi_connect("YourNetworkName", "YourPassword")
+
+# Connect temporarily (lost on reboot - useful for guest networks)
+iex> wifi_connect_temp("GuestNetwork", "TempPassword")
+
+# Check WiFi connection status
+iex> wifi_status()
+
+# Check all network interfaces status
+iex> network_status()
+
+# Disconnect from WiFi
+iex> wifi_disconnect()
+```
+
+#### Method 3: Programmatic Configuration
+
+Use the WiFi configuration module directly:
+
+```elixir
+# Configure WiFi programmatically (persistent)
+MoodBot.WiFiConfig.configure_wifi("NetworkName", "Password")
+
+# Configure WiFi temporarily (lost on reboot)
+MoodBot.WiFiConfig.configure_wifi_temporary("GuestNetwork", "TempPassword")
+
+# Check current status
+MoodBot.WiFiConfig.status()
+
+# Scan for networks
+MoodBot.WiFiConfig.scan()
+
+# Disconnect
+MoodBot.WiFiConfig.disable_wifi()
+
+# Monitor network status across all interfaces
+MoodBot.NetworkMonitor.get_status()
+MoodBot.NetworkMonitor.has_internet?()
+MoodBot.NetworkMonitor.get_primary_interface()
+```
+
+#### WiFi Configuration Persistence
+
+- **Automatic persistence**: WiFi configurations are automatically saved and restored on reboot
+- **Temporary connections**: Use `wifi_connect_temp()` for connections that shouldn't persist
+- **Multiple networks**: You can configure multiple networks; the device will connect to the best available
+- **Modern security**: Uses WPA2/WPA3 compatible configuration that works with all modern routers
+- **Factory reset**: Clear all saved configurations by reflashing firmware
+
+#### Troubleshooting WiFi
+
+**Can't connect to WiFi:**
+
+- Check network name and password: `wifi_scan()` to verify SSID
+- Verify signal strength: Look for signal bars in scan results
+- Check frequency: Some networks use 5GHz which may not be supported on all Pi models
+- **Regulatory domain**: Ensure `REGULATORY_DOMAIN` environment variable matches your country (check your `.env` file)
+- Try different security modes: Modern WPA2/WPA3 configuration should work with most routers
+
+**Connection drops:**
+
+- Check `wifi_status()` and `network_status()` for connection state
+- Verify power supply is adequate (WiFi requires more power)
+- Check for interference from other 2.4GHz devices
+- Monitor network events: `MoodBot.NetworkMonitor.subscribe()` for real-time updates
+
+**Network monitoring:**
+
+- Use `network_status()` to see all interfaces (eth0, wlan0, usb0)
+- Check `MoodBot.NetworkMonitor.has_internet?()` for internet connectivity
+- Monitor connection quality with signal strength indicators
+- Subscribe to network events for real-time status updates
+
+### Network Monitoring
+
+MoodBot includes comprehensive network monitoring that tracks all interfaces in real-time:
+
+#### Real-time Network Events
+
+The `MoodBot.NetworkMonitor` GenServer automatically monitors:
+
+- **Interface state changes**: configured, deconfigured, connecting, etc.
+- **Connection status**: internet, lan, disconnected
+- **IP address changes**: DHCP renewals, static IP changes
+- **WiFi signal strength**: real-time signal quality monitoring
+- **Network prioritization**: automatic primary interface selection (Ethernet > WiFi > Mobile)
+
+#### Subscribing to Network Events
+
+```elixir
+# Subscribe to network events in your application
+MoodBot.NetworkMonitor.subscribe()
+
+# You'll receive messages like:
+# {:network_event, :connection_change, "wlan0", %{connection: :internet}}
+# {:network_event, :signal_change, "wlan0", %{signal: 85}}
+# {:network_event, :ip_change, "eth0", %{ip: "192.168.1.100"}}
+```
+
+#### Integration with Display
+
+Network monitoring can be integrated with the mood display:
+
+```elixir
+# Example: Show network status as mood
+case MoodBot.NetworkMonitor.has_internet?() do
+  true -> MoodBot.Display.show_mood(:happy)    # Connected
+  false -> MoodBot.Display.show_mood(:sad)     # Disconnected
+end
+
+# Show signal strength as mood intensity
+case MoodBot.NetworkMonitor.get_status() do
+  %{"wlan0" => %{signal: signal}} when signal > 70 -> :happy
+  %{"wlan0" => %{signal: signal}} when signal > 30 -> :neutral
+  _ -> :sad
+end
+```
+
+### Display Configuration
 
 ```elixir
 # config/target.exs (hardware-specific)

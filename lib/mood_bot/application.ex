@@ -14,6 +14,11 @@ defmodule MoodBot.Application do
         # {MoodBot.Worker, arg},
       ] ++ target_children()
 
+    # Try to auto-configure WiFi from environment variables on target devices
+    if Mix.target() != :host do
+      MoodBot.WiFiConfig.auto_configure()
+    end
+
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: MoodBot.Supervisor]
@@ -28,7 +33,9 @@ defmodule MoodBot.Application do
         # In general, prefer using `config/host.exs` for differences.
         #
         # Start display with mock HAL for development
-        {MoodBot.Display, []}
+        {MoodBot.Display, []},
+        # Start network monitor (will be inactive on host)
+        {MoodBot.NetworkMonitor, []}
       ]
     end
   else
@@ -36,7 +43,9 @@ defmodule MoodBot.Application do
       [
         # Children for all targets except host
         # Start display with real hardware HAL
-        {MoodBot.Display, []}
+        {MoodBot.Display, []},
+        # Start network monitor for real-time network status tracking
+        {MoodBot.NetworkMonitor, []}
       ]
     end
   end

@@ -5,6 +5,16 @@
 # this project.
 import Config
 
+# Load environment variables from .env file for development
+if Mix.env() in [:dev, :test] do
+  try do
+    Dotenv.load()
+  rescue
+    # Ignore if dotenv fails or .env doesn't exist
+    _ -> :ok
+  end
+end
+
 # Enable the Nerves integration with Mix
 Application.start(:nerves_bootstrap)
 
