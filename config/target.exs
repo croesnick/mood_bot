@@ -36,7 +36,7 @@ keys =
 authorized_keys =
   if keys == [] do
     raise "No SSH public keys found in ~/.ssh/id_rsa.pub, ~/.ssh/id_ecdsa.pub, or ~/.ssh/id_ed25519.pub. " <>
-          "Please generate a key pair using `ssh-keygen` and add it to your .ssh directory."
+            "Please generate a key pair using `ssh-keygen` and add it to your .ssh directory."
   else
     Enum.map(keys, &File.read!/1)
   end

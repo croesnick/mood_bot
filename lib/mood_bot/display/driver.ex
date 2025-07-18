@@ -168,9 +168,17 @@ defmodule MoodBot.Display.Driver do
 
   @doc """
   Display image data on the screen.
+  This function is kept for backward compatibility and defaults to partial update.
   """
   def display_frame(hal, hal_state, image_data) when is_binary(image_data) do
-    Logger.debug("Display: Updating frame with #{byte_size(image_data)} bytes")
+    display_frame_partial(hal, hal_state, image_data)
+  end
+
+  @doc """
+  Display image data with partial update (fast, ~2 seconds).
+  """
+  def display_frame_partial(hal, hal_state, image_data) when is_binary(image_data) do
+    Logger.debug("Display: Updating frame with partial update - #{byte_size(image_data)} bytes")
 
     expected_size = div(@width, 8) * @height
 
@@ -183,32 +191,83 @@ defmodule MoodBot.Display.Driver do
     else
       with {:ok, hal_state} <- send_command(hal, hal_state, @commands.write_ram),
            {:ok, hal_state} <- send_data(hal, hal_state, image_data),
-           {:ok, hal_state} <- turn_on_display(hal, hal_state) do
-        Logger.debug("Display: Frame update complete")
+           {:ok, hal_state} <- partial_update(hal, hal_state) do
+        Logger.debug("Display: Partial frame update complete")
         {:ok, hal_state}
       end
     end
   end
 
   @doc """
-  Clear the display to white.
+  Display image data with full refresh (slower, ~15 seconds).
+  """
+  def display_frame_full(hal, hal_state, image_data) when is_binary(image_data) do
+    Logger.debug("Display: Updating frame with full refresh - #{byte_size(image_data)} bytes")
+
+    expected_size = div(@width, 8) * @height
+
+    if byte_size(image_data) != expected_size do
+      Logger.error(
+        "Display: Invalid image data size. Expected #{expected_size}, got #{byte_size(image_data)}"
+      )
+
+      {:error, :invalid_image_size}
+    else
+      with {:ok, hal_state} <- send_command(hal, hal_state, @commands.write_ram),
+           {:ok, hal_state} <- send_data(hal, hal_state, image_data),
+           {:ok, hal_state} <- full_refresh(hal, hal_state) do
+        Logger.debug("Display: Full frame refresh complete")
+        {:ok, hal_state}
+      end
+    end
+  end
+
+  @doc """
+  Clear the display to white using full refresh.
   """
   def clear(hal, hal_state) do
-    Logger.debug("Display: Clearing to white")
+    Logger.debug("Display: Clearing to white with full refresh")
 
     # Create white image data (all bits set to 1)
     image_size = div(@width, 8) * @height
     white_data = :binary.copy(<<0xFF>>, image_size)
 
-    display_frame(hal, hal_state, white_data)
+    display_frame_full(hal, hal_state, white_data)
   end
 
   @doc """
   Turn on the display update.
+  This function is kept for backward compatibility and defaults to partial update.
   """
   def turn_on_display(hal, hal_state) do
+    partial_update(hal, hal_state)
+  end
+
+  @doc """
+  Perform a partial update of the display (fast, ~2 seconds).
+  Only updates changed pixels but can cause ghosting over time.
+  """
+  def partial_update(hal, hal_state) do
+    Logger.debug("Display: Performing partial update")
+
     with {:ok, hal_state} <- send_command(hal, hal_state, @commands.display_update_control_2),
          {:ok, hal_state} <- send_data(hal, hal_state, <<0xC7>>),
+         {:ok, hal_state} <- send_command(hal, hal_state, @commands.master_activation),
+         {:ok, hal_state} <- send_command(hal, hal_state, @commands.terminate_frame_read_write),
+         {:ok, hal_state} <- wait_until_idle(hal, hal_state) do
+      {:ok, hal_state}
+    end
+  end
+
+  @doc """
+  Perform a full refresh of the display (slower, ~15 seconds).
+  Resets the entire display and eliminates ghosting.
+  """
+  def full_refresh(hal, hal_state) do
+    Logger.debug("Display: Performing full refresh")
+
+    with {:ok, hal_state} <- send_command(hal, hal_state, @commands.display_update_control_2),
+         {:ok, hal_state} <- send_data(hal, hal_state, <<0xF7>>),
          {:ok, hal_state} <- send_command(hal, hal_state, @commands.master_activation),
          {:ok, hal_state} <- send_command(hal, hal_state, @commands.terminate_frame_read_write),
          {:ok, hal_state} <- wait_until_idle(hal, hal_state) do

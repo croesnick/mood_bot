@@ -128,3 +128,32 @@ This approach enables automated debugging through Claude Code without manual int
 ## Development Workflow
 
 - At the end of a feature, compile a brief yet complete git commit message. Use contentional commits with the most suitable tag. Ask if you should do the git commit.
+
+## Architecture & Design Principles
+
+### Research-Driven Decision Making
+- **Always research before refactoring**: The "obvious" solution isn't always the best one
+- **Documentation as source of truth**: When code and docs diverge, docs often represent intended behavior
+- **Validate assumptions**: Question initial assumptions through systematic investigation
+
+### Tool Selection Philosophy
+- **Right tool for the job**: Choose tools based on actual requirements, not perceived complexity
+- **GenServer for simple state machines**: Prefer GenServer over formal state machine libraries for simple state tracking
+- **Incremental improvement over rewrites**: Sometimes polishing existing code is better than starting over
+
+### State Machine Design Patterns
+- **Manual state tracking is acceptable**: For simple state machines in GenServer, manual state tracking with validation is appropriate
+- **Centralized state transitions**: Extract state transition logic into dedicated functions
+- **Validation before action**: Always validate state before performing operations
+- **Pattern matching for clarity**: Use guards and pattern matching to make intent explicit
+
+### When NOT to Use Formal State Machine Libraries
+- **gen_statem**: Overkill for simple state tracking; designed for complex protocols/persistent connections
+- **Machinery**: For data state machines (user workflows), not process state machines
+- **Finitomata**: For complex FSMs needing visual documentation
+
+### Code Quality Principles
+- **Extract common patterns**: Consolidate repetitive logic into reusable functions
+- **Comprehensive error handling**: Return consistent error tuples and handle gracefully
+- **Detailed logging**: Include context and state information in log messages
+- **Validation functions**: Separate validation logic from business logic

@@ -9,7 +9,7 @@ defmodule MoodBot.WiFiConfig do
   """
 
   require Logger
-  
+
   # Store target at compile time since Mix.target() is not available at runtime
   @target Mix.target()
 
@@ -218,7 +218,8 @@ defmodule MoodBot.WiFiConfig do
           connection: Map.get(properties_map, ["interface", "wlan0", "connection"]),
           ssid: get_current_ssid(properties_map),
           frequency: Map.get(properties_map, ["interface", "wlan0", "wifi", "frequency"]),
-          signal_percent: Map.get(properties_map, ["interface", "wlan0", "wifi", "signal_percent"])
+          signal_percent:
+            Map.get(properties_map, ["interface", "wlan0", "wifi", "signal_percent"])
         }
 
       _ ->
