@@ -458,6 +458,28 @@ wifi_status()
 network_status()  # Shows all interfaces (eth0, wlan0, usb0)
 ```
 
+#### Remote Debugging Commands
+
+For non-interactive debugging via SSH MCP, use these direct function calls:
+
+```bash
+# Network overview
+VintageNet.info()
+
+# WiFi configuration and status
+VintageNet.get_configuration("wlan0")
+VintageNet.all_interfaces()
+VintageNet.scan("wlan0")
+
+# MoodBot WiFi status (when application is running)
+MoodBot.WiFiConfig.status()
+
+# System information
+:os.type()
+System.version()
+Application.started_applications() |> Enum.map(fn {name, _desc, _vsn} -> name end)
+```
+
 Each command should display a distinct visual pattern on the e-ink display, confirming successful hardware integration.
 
 #### Troubleshooting First Flash

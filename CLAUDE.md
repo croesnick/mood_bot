@@ -82,46 +82,53 @@ The project supports multiple embedded targets: `:rpi0`, `:rpi3`, `:rpi3a`, `:rp
 
 ### SSH MCP Remote Debugging
 
-When debugging issues on Nerves devices, use SSH MCP with direct Elixir evaluation instead of interactive IEx sessions.
+When debugging issues on Nerves devices, use SSH MCP with direct Elixir function calls instead of interactive IEx sessions.
 
 **Setup:** Configure ssh-mcp (https://github.com/tufantunc/ssh-mcp) to connect to the Nerves device.
 
-**Pattern:** Use `ssh nerves.local "iex -e 'command' --no-halt"` for non-interactive debugging.
+**Pattern:** Use direct function calls without `iex -e` wrapper for simple, reliable debugging.
 
 ### Standard Debugging Commands
 
 **Network Overview:**
 ```bash
-ssh nerves.local "iex -e 'VintageNet.info' --no-halt"
+VintageNet.info()
 ```
 
 **WiFi Debugging:**
 ```bash
 # WiFi interface status
-ssh nerves.local "iex -e 'VintageNet.get(\"interface.wlan0.state\") |> IO.inspect' --no-halt"
+VintageNet.get("interface.wlan0.state")
 
 # WiFi configuration  
-ssh nerves.local "iex -e 'VintageNet.get_configuration(\"wlan0\") |> IO.inspect' --no-halt"
+VintageNet.get_configuration("wlan0")
 
 # Available networks
-ssh nerves.local "iex -e 'VintageNet.scan(\"wlan0\") |> IO.inspect' --no-halt"
+VintageNet.scan("wlan0")
 
 # All interfaces
-ssh nerves.local "iex -e 'VintageNet.all_interfaces() |> IO.inspect' --no-halt"
+VintageNet.all_interfaces()
 ```
 
-**Error-Safe Debugging:**
+**MoodBot Status (when application is running):**
 ```bash
-ssh nerves.local "iex -e 'try do; VintageNet.get_configuration(\"wlan0\") |> IO.inspect; rescue e -> IO.inspect({:error, e}); end' --no-halt"
+MoodBot.WiFiConfig.status()
+```
+
+**System Information:**
+```bash
+:os.type()
+System.version()
+Application.started_applications() |> Enum.map(fn {name, _desc, _vsn} -> name end)
 ```
 
 ### Key Principles
 
-1. **Always use `--no-halt`** to prevent interactive IEx sessions
-2. **Wrap risky commands in try/rescue** blocks for robust error handling  
-3. **Use `IO.inspect`** for complex data structures
-4. **Test commands manually first** before SSH MCP automation
-5. **Chain related commands** in single execution when possible
+1. **Use direct function calls** instead of `iex -e` wrappers
+2. **Functions return data directly** - no need for `IO.inspect`
+3. **Keep commands simple** and focused on single operations
+4. **Use VintageNet functions** for network debugging (always available)
+5. **Test commands manually first** before SSH MCP automation
 
 This approach enables automated debugging through Claude Code without manual intervention.
 

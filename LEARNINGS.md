@@ -188,7 +188,7 @@ config :mdns_lite,
 
 **Problem:** Nerves debugging typically uses interactive IEx sessions with Toolshed helpers like `wifi_status()`, `ifconfig`, etc. However, SSH MCP executes discrete commands without maintaining IEx session state.
 
-**Solution:** Use direct Elixir evaluation with `iex -e 'command' --no-halt` pattern to execute debugging commands non-interactively.
+**Solution:** Use direct Elixir function calls without `iex -e` wrapper - this approach is simpler and more reliable than complex evaluation patterns.
 
 ### SSH MCP Server Setup
 
@@ -200,57 +200,77 @@ config :mdns_lite,
 - Configurable command timeouts
 - Direct integration with Claude Code for automated debugging
 
-### Direct Elixir Evaluation Patterns
+### Working Direct Function Call Patterns
 
 **Network Overview:**
 ```bash
-ssh nerves.local "iex -e 'VintageNet.info' --no-halt"
+VintageNet.info()
 ```
 
 **WiFi Interface Status:**
 ```bash
-ssh nerves.local "iex -e 'VintageNet.get(\"interface.wlan0.state\") |> IO.inspect' --no-halt"
+VintageNet.get("interface.wlan0.state")
 ```
 
 **WiFi Configuration:**
 ```bash
-ssh nerves.local "iex -e 'VintageNet.get_configuration(\"wlan0\") |> IO.inspect' --no-halt"
+VintageNet.get_configuration("wlan0")
 ```
 
 **Available WiFi Networks:**
 ```bash
-ssh nerves.local "iex -e 'VintageNet.scan(\"wlan0\") |> IO.inspect' --no-halt"
+VintageNet.scan("wlan0")
 ```
 
 **All Network Interfaces:**
 ```bash
-ssh nerves.local "iex -e 'VintageNet.all_interfaces() |> IO.inspect' --no-halt"
+VintageNet.all_interfaces()
 ```
 
-**WiFi Status Equivalent (Toolshed replacement):**
+**System Information:**
 ```bash
-ssh nerves.local "iex -e 'interfaces = VintageNet.all_interfaces(); wifi_interfaces = Enum.filter(interfaces, &String.starts_with?(&1, \"wlan\")); Enum.each(wifi_interfaces, fn iface -> IO.puts(\"#{iface}: #{inspect(VintageNet.get_configuration(iface))}\") end)' --no-halt"
+:os.type()
+System.version()
 ```
 
-### Error Handling in Non-Interactive Commands
-
-**Safe Command Execution with Error Handling:**
+**Application Status:**
 ```bash
-ssh nerves.local "iex -e 'try do; VintageNet.get_configuration(\"wlan0\") |> IO.inspect; rescue e -> IO.inspect({:error, e}); end' --no-halt"
+Application.started_applications() |> Enum.map(fn {name, _desc, _vsn} -> name end)
 ```
+
+**MoodBot WiFi Status (when application is running):**
+```bash
+MoodBot.WiFiConfig.status()
+```
+
+### What Doesn't Work
+
+**❌ `iex -e '...' --no-halt` patterns:**
+- Causes compilation errors
+- Adds unnecessary complexity
+- Not compatible with SSH MCP execution
+
+**❌ Complex try/rescue patterns:**
+- Don't properly handle errors in this context
+- Add unnecessary verbosity
+
+**❌ `IO.inspect` wrappers:**
+- Not needed - direct function returns work better
+- Functions already return properly formatted data
 
 ### Key Advantages
 
-1. **No File Transfers:** Commands are self-contained, no need to upload debugging modules
-2. **Flexible:** Easy to modify commands on the fly during debugging
+1. **Simple and Reliable:** Direct function calls without complex evaluation wrappers
+2. **No File Transfers:** Commands are self-contained, no need to upload debugging modules
 3. **SSH MCP Compatible:** Each command is discrete and can be executed via MCP
 4. **No State Dependency:** Each execution is independent, no session state required
 5. **Direct Integration:** Works seamlessly with Claude Code for automated debugging
 
 ### Best Practices
 
-- Always use `--no-halt` flag to prevent IEx from starting interactive session
-- Wrap potentially failing commands in try/rescue blocks for robust error handling
-- Use `IO.inspect` for complex data structures to get proper formatting
-- Chain multiple debugging commands in single execution when related
+- Use direct function calls instead of `iex -e` wrappers
+- Functions return data directly - no need for `IO.inspect`
 - Test commands manually first before integrating with SSH MCP automation
+- Keep commands simple and focused on single operations
+- Use VintageNet functions for network debugging (always available)
+- Check if MoodBot application is running before calling MoodBot-specific functions
