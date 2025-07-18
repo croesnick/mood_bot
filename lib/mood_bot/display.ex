@@ -221,7 +221,7 @@ defmodule MoodBot.Display do
         state = wake_from_power_saving(state)
         state = transition_to_state(state, :updating_display)
 
-        case MoodBot.Display.Driver.display_frame_full(
+        case Driver.display_frame_full(
                state.hal_module,
                state.hal_state,
                white_data
@@ -255,13 +255,13 @@ defmodule MoodBot.Display do
       :ok ->
         operation_fn = fn needs_full ->
           if needs_full do
-            MoodBot.Display.Driver.display_frame_full(
+            Driver.display_frame_full(
               state.hal_module,
               state.hal_state,
               image_data
             )
           else
-            MoodBot.Display.Driver.display_frame_partial(
+            Driver.display_frame_partial(
               state.hal_module,
               state.hal_state,
               image_data
@@ -299,13 +299,13 @@ defmodule MoodBot.Display do
         operation_fn = fn needs_full ->
           result =
             if needs_full do
-              MoodBot.Display.Driver.display_frame_full(
+              Driver.display_frame_full(
                 state.hal_module,
                 state.hal_state,
                 image_data
               )
             else
-              MoodBot.Display.Driver.display_frame_partial(
+              Driver.display_frame_partial(
                 state.hal_module,
                 state.hal_state,
                 image_data
@@ -413,7 +413,7 @@ defmodule MoodBot.Display do
 
     state = transition_to_state(state, :refreshing_screen)
 
-    case MoodBot.Display.Driver.display_frame_full(state.hal_module, state.hal_state, white_data) do
+    case Driver.display_frame_full(state.hal_module, state.hal_state, white_data) do
       {:ok, hal_state} ->
         updated_state =
           state

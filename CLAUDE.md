@@ -157,3 +157,6 @@ This approach enables automated debugging through Claude Code without manual int
 - **Comprehensive error handling**: Return consistent error tuples and handle gracefully
 - **Detailed logging**: Include context and state information in log messages
 - **Validation functions**: Separate validation logic from business logic
+
+### Development Target Memories
+- Use `MIX_TARGET=rpi3` for Raspberry Pi 3 specific development and firmware builds
