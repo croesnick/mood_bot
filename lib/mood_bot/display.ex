@@ -20,13 +20,13 @@ defmodule MoodBot.Display do
     # Hardware configuration for Raspberry Pi
     spi_device: "spidev0.0",
     # Data/Command pin
-    dc_pin: 25,
+    dc_pin: 22,
     # Reset pin
-    rst_pin: 17,
+    rst_pin: 11,
     # Busy signal pin
-    busy_pin: 24,
+    busy_pin: 18,
     # Chip Select pin
-    cs_pin: 8,
+    cs_pin: 24,
     # Will be set based on target
     hal_module: nil
   }

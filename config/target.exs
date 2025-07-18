@@ -99,14 +99,14 @@ config :mdns_lite,
 # Configure the e-ink display
 config :mood_bot, MoodBot.Display,
   spi_device: "spidev0.0",
-  # Data/Command pin (GPIO 25)
-  dc_pin: 25,
-  # Reset pin (GPIO 17)
-  rst_pin: 17,
-  # Busy signal pin (GPIO 24)
-  busy_pin: 24,
-  # Chip Select pin (GPIO 8)
-  cs_pin: 8
+  # Data/Command pin (GPIO 22)
+  dc_pin: 22,
+  # Reset pin (GPIO 11)
+  rst_pin: 11,
+  # Busy signal pin (GPIO 18)
+  busy_pin: 18,
+  # Chip Select pin (GPIO 24)
+  cs_pin: 24
 
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

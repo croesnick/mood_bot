@@ -308,16 +308,18 @@ The display expects binary data where:
 
 ### Pin Connections
 
-| Display Pin | RPi GPIO | Purpose |
-|-------------|----------|---------|
-| VCC         | 3.3V     | Power   |
-| GND         | GND      | Ground  |
-| DIN         | SPI MOSI | Data    |
-| CLK         | SPI SCLK | Clock   |
-| CS          | GPIO 8   | Chip Select |
-| DC          | GPIO 25  | Data/Command |
-| RST         | GPIO 17  | Reset   |
-| BUSY        | GPIO 24  | Busy Signal |
+| Display Pin | RPi GPIO | Purpose      |
+|-------------|----------|--------------|
+| VCC         | 3.3V     | Power        |
+| GND         | GND      | Ground       |
+| DIN         | GPIO 19  | Data         |
+| CLK         | GPIO 23  | Clock        |
+| CS          | GPIO 24  | Chip Select  |
+| DC          | GPIO 22  | Data/Command |
+| RST         | GPIO 11  | Reset        |
+| BUSY        | GPIO 18  | Busy Signal  |
+
+See: <https://www.waveshare.com/wiki/2.9inch_e-Paper_Module_Manual#Working_With_Raspberry_Pi>
 
 ### Building for Hardware
 
@@ -812,21 +814,6 @@ case MoodBot.NetworkMonitor.get_status() do
   %{"wlan0" => %{signal: signal}} when signal > 30 -> :neutral
   _ -> :sad
 end
-```
-
-### Display Configuration
-
-```elixir
-# config/target.exs (hardware-specific)
-config :mood_bot, MoodBot.Display,
-  spi_device: "spidev0.0",
-  dc_pin: 25,
-  rst_pin: 17,
-  busy_pin: 24,
-  cs_pin: 8
-
-# config/host.exs (development)
-# Uses MockHAL automatically, no config needed
 ```
 
 ### Runtime Configuration
