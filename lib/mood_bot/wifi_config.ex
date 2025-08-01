@@ -239,10 +239,14 @@ defmodule MoodBot.WiFiConfig do
       {:ok, access_points} ->
         access_points
         |> Enum.map(fn ap ->
+          # Convert signal_dbm to signal_percent using a simple conversion
+          # Good signal: -30 dBm = 100%, Poor signal: -90 dBm = 0%
+          signal_percent = dbm_to_percent(ap.signal_dbm)
+
           %{
             ssid: ap.ssid,
             frequency: ap.frequency,
-            signal_percent: ap.signal_percent,
+            signal_percent: signal_percent,
             flags: ap.flags
           }
         end)
@@ -262,4 +266,18 @@ defmodule MoodBot.WiFiConfig do
       _ -> nil
     end
   end
+
+  # Convert dBm to percentage
+  # This uses a simple linear conversion where:
+  # - -30 dBm = 100% (excellent signal)
+  # - -90 dBm = 0% (poor signal)
+  defp dbm_to_percent(dbm) when is_number(dbm) do
+    # Clamp between -90 and -30 dBm
+    clamped_dbm = max(-90, min(-30, dbm))
+    # Convert to percentage (0-100)
+    percentage = round((clamped_dbm + 90) / 60 * 100)
+    max(1, min(100, percentage))
+  end
+
+  defp dbm_to_percent(_), do: 0
 end

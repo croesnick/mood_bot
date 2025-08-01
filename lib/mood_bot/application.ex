@@ -15,7 +15,7 @@ defmodule MoodBot.Application do
       ] ++ target_children()
 
     # Try to auto-configure WiFi from environment variables on target devices
-    if Mix.target() != :host do
+    if runtime_target() != :host do
       MoodBot.WiFiConfig.auto_configure()
     end
 
@@ -23,6 +23,14 @@ defmodule MoodBot.Application do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: MoodBot.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  # Runtime-safe target detection
+  defp runtime_target do
+    case Code.ensure_loaded(VintageNet) do
+      {:module, VintageNet} -> :target
+      {:error, _} -> :host
+    end
   end
 
   # List all child processes to be supervised

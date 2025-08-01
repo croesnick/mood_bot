@@ -6,46 +6,67 @@ defmodule MoodBot.Display.MockHAL do
   for development when running on host without actual hardware.
   """
 
+  use TypedStruct
+
   @behaviour MoodBot.Display.HAL
 
   require Logger
 
-  defstruct [
-    :config,
-    :session_id,
-    dc_state: 0,
-    rst_state: 1,
-    busy_state: 0,
-    frame_counter: 0,
-    save_bitmaps: false
-  ]
+  @type config :: %{
+          spi_device: String.t(),
+          # GPIO identifiers (can be pin numbers, labels, or {controller, offset} tuples)
+          pwr_gpio: Circuits.GPIO.gpio_spec(),
+          dc_gpio: Circuits.GPIO.gpio_spec(),
+          rst_gpio: Circuits.GPIO.gpio_spec(),
+          busy_gpio: Circuits.GPIO.gpio_spec()
+          # cs_gpio: Circuits.GPIO.gpio_spec()
+        }
+
+  typedstruct do
+    field(:config, config())
+    field(:session_id, String.t())
+    field(:dc_state, 0 | 1, default: 0)
+    field(:rst_state, 0 | 1, default: 1)
+    field(:busy_state, 0 | 1, default: 0)
+    field(:frame_counter, non_neg_integer(), default: 0)
+    field(:save_bitmaps, boolean(), default: false)
+  end
 
   @impl true
+  @spec init(config()) :: {:ok, t()} | {:error, atom()}
   def init(config) do
     Logger.debug("Initializing MockHAL with config: #{inspect(config)}")
 
-    session_id = :crypto.strong_rand_bytes(4) |> Base.encode16(case: :lower)
-    save_bitmaps = Map.get(config, :save_bitmaps, true)
+    # Validate configuration format for development consistency
+    case validate_mock_config(config) do
+      :ok ->
+        session_id = :crypto.strong_rand_bytes(4) |> Base.encode16(case: :lower)
+        save_bitmaps = Map.get(config, :save_bitmaps, true)
 
-    state = %__MODULE__{
-      config: config,
-      session_id: session_id,
-      dc_state: 0,
-      rst_state: 1,
-      busy_state: 0,
-      frame_counter: 0,
-      save_bitmaps: save_bitmaps
-    }
+        state = %__MODULE__{
+          config: config,
+          session_id: session_id,
+          dc_state: 0,
+          rst_state: 1,
+          busy_state: 0,
+          frame_counter: 0,
+          save_bitmaps: save_bitmaps
+        }
 
-    if save_bitmaps do
-      Logger.info(
-        "MockHAL initialized for development mode with bitmap saving enabled (session: #{session_id})"
-      )
-    else
-      Logger.info("MockHAL initialized for development mode")
+        if save_bitmaps do
+          Logger.info(
+            "MockHAL initialized for development mode with bitmap saving enabled (session: #{session_id})"
+          )
+        else
+          Logger.info("MockHAL initialized for development mode")
+        end
+
+        {:ok, state}
+
+      {:error, reason} ->
+        Logger.error("MockHAL configuration validation failed", error: reason, config: config)
+        {:error, reason}
     end
-
-    {:ok, state}
   end
 
   # Expected size for full image data (128 * 296 / 8 = 4736 bytes)
@@ -141,5 +162,72 @@ defmodule MoodBot.Display.MockHAL do
     Logger.debug("MockHAL: Sleeping for #{milliseconds}ms")
     Process.sleep(milliseconds)
     :ok
+  end
+
+  # Configuration validation functions
+
+  defp validate_mock_config(config) do
+    required_fields = [:spi_device, :pwr_gpio, :dc_gpio, :rst_gpio, :busy_gpio]
+
+    case validate_required_fields(config, required_fields) do
+      :ok ->
+        validate_mock_field_types(config)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp validate_required_fields(config, required_fields) do
+    missing_fields = required_fields -- Map.keys(config)
+
+    if Enum.empty?(missing_fields) do
+      :ok
+    else
+      Logger.error("MockHAL configuration validation failed: missing required fields",
+        missing_fields: missing_fields,
+        required_fields: required_fields
+      )
+
+      {:error, {:missing_config_fields, missing_fields}}
+    end
+  end
+
+  defp validate_mock_field_types(config) do
+    validations = [
+      {:spi_device, config.spi_device, &is_binary/1, "string"},
+      {:pwr_gpio, config.pwr_gpio, &valid_gpio_spec?/1, "valid GPIO specification"},
+      {:dc_gpio, config.dc_gpio, &valid_gpio_spec?/1, "valid GPIO specification"},
+      {:rst_gpio, config.rst_gpio, &valid_gpio_spec?/1, "valid GPIO specification"},
+      {:busy_gpio, config.busy_gpio, &valid_gpio_spec?/1, "valid GPIO specification"}
+      # {:cs_gpio, config.cs_gpio, &valid_gpio_spec?/1, "valid GPIO specification"}
+    ]
+
+    Enum.reduce_while(validations, :ok, fn {field_name, value, validator, type_name}, _acc ->
+      if validator.(value) do
+        {:cont, :ok}
+      else
+        Logger.error("MockHAL configuration validation failed: invalid field type",
+          field: field_name,
+          value: value,
+          expected_type: type_name
+        )
+
+        {:halt, {:error, {:invalid_config_field_type, field_name, type_name}}}
+      end
+    end)
+  end
+
+  defp valid_gpio_spec?(value) do
+    case value do
+      {controller, offset} when is_binary(controller) and is_integer(offset) and offset >= 0 ->
+        true
+
+      pin_number when is_integer(pin_number) and pin_number >= 0 ->
+        true
+
+      _ ->
+        false
+    end
   end
 end

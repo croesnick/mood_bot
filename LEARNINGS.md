@@ -192,53 +192,62 @@ config :mdns_lite,
 
 ### SSH MCP Server Setup
 
-**Repository:** https://github.com/tufantunc/ssh-mcp
+**Repository:** <https://github.com/tufantunc/ssh-mcp>
 
 **Capabilities:**
+
 - MCP-compliant server for executing shell commands over SSH
-- Secure authentication (password or SSH key) 
+- Secure authentication (password or SSH key)
 - Configurable command timeouts
 - Direct integration with Claude Code for automated debugging
 
 ### Working Direct Function Call Patterns
 
 **Network Overview:**
+
 ```bash
 VintageNet.info()
 ```
 
 **WiFi Interface Status:**
+
 ```bash
 VintageNet.get("interface.wlan0.state")
 ```
 
 **WiFi Configuration:**
+
 ```bash
 VintageNet.get_configuration("wlan0")
 ```
 
 **Available WiFi Networks:**
+
 ```bash
 VintageNet.scan("wlan0")
 ```
 
 **All Network Interfaces:**
+
 ```bash
 VintageNet.all_interfaces()
 ```
 
 **System Information:**
+
 ```bash
 :os.type()
 System.version()
 ```
 
 **Application Status:**
+
 ```bash
 Application.started_applications() |> Enum.map(fn {name, _desc, _vsn} -> name end)
 ```
 
 **MoodBot WiFi Status (when application is running):**
+
 ```bash
 MoodBot.WiFiConfig.status()
 ```
@@ -246,15 +255,18 @@ MoodBot.WiFiConfig.status()
 ### What Doesn't Work
 
 **❌ `iex -e '...' --no-halt` patterns:**
+
 - Causes compilation errors
 - Adds unnecessary complexity
 - Not compatible with SSH MCP execution
 
 **❌ Complex try/rescue patterns:**
+
 - Don't properly handle errors in this context
 - Add unnecessary verbosity
 
 **❌ `IO.inspect` wrappers:**
+
 - Not needed - direct function returns work better
 - Functions already return properly formatted data
 
@@ -274,3 +286,149 @@ MoodBot.WiFiConfig.status()
 - Keep commands simple and focused on single operations
 - Use VintageNet functions for network debugging (always available)
 - Check if MoodBot application is running before calling MoodBot-specific functions
+
+## GPIO Pin Debugging on Nerves
+
+### Challenge: Misleading "GPIO Busy" Errors
+
+**Problem:** Hardware initialization errors often show "GPIO busy" messages that suggest pins are unavailable, but the actual issue may be elsewhere in the hardware abstraction layer.
+
+**Solution:** Use `circuits_gpio` built-in diagnostics to distinguish between actual pin conflicts and hardware logic errors.
+
+### Simple GPIO Debugging Pattern
+
+**Add a debugging function to your IEx helpers:**
+
+```elixir
+def gpio_debug do
+  IO.puts("GPIO Backend Info:")
+  backend_info = Circuits.GPIO.backend_info()
+  IO.inspect(backend_info)
+  
+  IO.puts("\nAvailable GPIOs:")
+  available_gpios = Circuits.GPIO.enumerate()
+  available_gpios |> Enum.take(10) |> Enum.each(&IO.inspect/1)
+  
+  IO.puts("\nDisplay pins status (DC:22, RST:11, BUSY:18, CS:24):")
+  [11, 18, 22, 24] |> Enum.each(fn pin ->
+    status = 
+      case Circuits.GPIO.status(pin) do
+        {:ok, info} -> info
+        {:error, reason} -> "Error: #{inspect(reason)}"
+      end
+    IO.puts("  GPIO #{pin}: #{inspect(status)}")
+  end)
+end
+```
+
+### Key Insights from MoodBot GPIO Debugging
+
+1. **"GPIO busy" doesn't mean pins are unavailable** - It often means they're properly claimed by `circuits_gpio`
+2. **Pin status shows actual configuration**: direction (input/output), pull mode, consumer
+3. **Real hardware errors occur in the HAL layer** - not in GPIO claiming
+4. **Case clause errors indicate missing value handling** - e.g., busy pin returning `0` with no case clause
+
+### Successful Debugging Workflow
+
+1. **Add gpio_debug() function** to your IEx helpers
+2. **Test via SSH MCP**: `ssh nerves.local "ModuleName.gpio_debug()"`
+3. **Check pin status** - look for proper claiming by "circuits_gpio"
+4. **If pins are properly claimed**, look for errors in hardware abstraction layer
+5. **Focus on the actual error location** - not misleading "GPIO busy" messages
+
+### Example Findings
+
+**What we thought:** GPIO pins 11, 18, 22, 24 were busy/unavailable
+**Reality:** All pins properly claimed by circuits_gpio with correct direction
+**Actual issue:** Case clause error in `gpio_read_busy/1` when busy pin returns `0`
+
+This simple debugging approach saves hours of troubleshooting GPIO availability when the real issue is in hardware logic.
+
+## SPI and CS GPIO Pin
+
+> I don't understand that yet. CS is a specific GPIO pin. The Python epaper driver also controls it. Explain the issue to me, and point me to the docs (maybe circuits_gpio or circuits_spi) to understand the problem in depth before performing any changes.
+
+⏺ You're absolutely right to want to understand this better. Let me explain the CS (Chip Select) GPIO conflict issue in detail.
+
+**The Problem**
+
+GPIO pin 8 is being claimed by two different systems:
+
+1. SPI subsystem: When we open "spidev0.0", the Linux SPI driver automatically claims GPIO 8 as "spi0 CS0" (hardware chip select)
+2. Our code: We're trying to manually open GPIO 8 as cs_gpio for manual control
+
+This creates a conflict - you can't have both automatic AND manual control of the same pin.
+
+Evidence from the Device
+
+**GPIO 8 status shows it's already claimed**
+
+```elixir
+{8, {:ok, %{consumer: "spi0 CS0"}}}  # ← Already claimed by SPI subsystem
+```
+
+**Error when trying to start**
+
+```elixir
+{:already_open}  # ← This is Circuits.GPIO telling us pin 8 is unavailable
+```
+
+How SPI CS Works - Two Approaches
+
+1. Hardware-Managed CS (spidev0.0)
+
+   - Linux SPI driver automatically controls CS
+   - CS goes low during transfer, high when idle
+   - Pros: Automatic, precise timing
+   - Cons: Less control over CS timing
+
+2. Manual CS Control
+
+   - Use a different GPIO pin (not pin 8)
+   - Manually control CS in your code
+   - Pros: Full control over CS timing
+   - Cons: More complex, timing-sensitive
+
+Documentation References
+
+Circuits.SPI docs: <https://hexdocs.pm/circuits_spi/Circuits.SPI.html>
+
+Key quote:
+> "The chip select pin is handled automatically by the SPI driver when using spidev devices"
+
+Circuits.GPIO docs: <https://hexdocs.pm/circuits_gpio/Circuits.GPIO.html>
+
+The :already_open error occurs when trying to open a GPIO that's already claimed by another kernel driver.
+
+Python Driver Comparison
+
+The Python epaper driver likely uses one of these approaches:
+
+1. Manual SPI: Uses /dev/mem or GPIO sysfs directly (bypasses spidev)
+2. Different CS pin: Uses a GPIO pin other than the hardware CS
+3. SPI device selection: Uses a different SPI device that doesn't auto-claim CS
+
+Solutions
+
+Option A: Use hardware CS (remove manual CS control)
+Option B: Change to a different GPIO pin for manual CSOption C: Use a different SPI device configuration
+
+Which approach would you prefer? I can show you the specific code changes once you decide on the direction.
+
+> Question is: Do I _need_ to control CS for the eink display to work? Or could I just rely on spidev to handle CS?
+
+⏺ Great question! Let me research this by looking at the e-ink display communication requirements and SPI timing.
+
+⏺ hexdocs - fetch (MCP)(packageName: "circuits_spi")
+  ⎿  Latest version of circuits_spi is 2.0.4                           
+     ✓ Embeddings for circuits_spi 2.0.4 already exist, skipping fetch.
+       Use --force to re-fetch and update embeddings.
+
+⏺ hexdocs - search (MCP)(packageName: "circuits_spi", query: "chip select CS control automatic manual timing requirements", limit: 3)
+  ⎿  Searching for "chip select CS control automatic manual timing requirements" in circuits_spi (latest versions only)...
+     ✓ Found 3 results:
+     … +92 lines (ctrl+r to expand)
+
+⏺ Perfect! This confirms that you don't need manual CS control. According to Circuits.SPI docs:
+
+  "All transactions will automatically set CS0. When using "spidev1.0" refers to SPI bus 1 and CS0. All transactions will automatically set CS0."

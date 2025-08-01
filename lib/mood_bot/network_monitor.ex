@@ -83,7 +83,7 @@ defmodule MoodBot.NetworkMonitor do
 
   @impl true
   def init(_opts) do
-    target = Mix.target()
+    target = runtime_target()
 
     # Only start monitoring on target devices
     if target != :host do
@@ -263,8 +263,16 @@ defmodule MoodBot.NetworkMonitor do
     end
   end
 
+  # Runtime-safe target detection
+  defp runtime_target do
+    case Code.ensure_loaded(VintageNet) do
+      {:module, VintageNet} -> :target
+      {:error, _} -> :host
+    end
+  end
+
   defp get_interface_status(interface) do
-    if Mix.target() == :host do
+    if runtime_target() == :host do
       %{
         state: :host_environment,
         connection: :unavailable,
@@ -275,19 +283,22 @@ defmodule MoodBot.NetworkMonitor do
     else
       properties = VintageNet.get_by_prefix(["interface", interface])
 
+      # Convert list of tuples to map for easier access
+      prop_map = properties |> Enum.into(%{})
+
       base_status = %{
-        state: get_in(properties, ["interface", interface, "state"]) || :unconfigured,
-        connection: get_in(properties, ["interface", interface, "connection"]) || :disconnected,
-        ip: extract_ip_address(get_in(properties, ["interface", interface, "addresses"]))
+        state: Map.get(prop_map, ["interface", interface, "state"], :unconfigured),
+        connection: Map.get(prop_map, ["interface", interface, "connection"], :disconnected),
+        ip: extract_ip_address(Map.get(prop_map, ["interface", interface, "addresses"]))
       }
 
       # Add WiFi-specific properties
       if interface == "wlan0" do
         Map.merge(base_status, %{
-          signal: get_in(properties, ["interface", interface, "wifi", "signal_percent"]),
+          signal: Map.get(prop_map, ["interface", interface, "wifi", "signal_percent"]),
           ssid:
             extract_current_ssid(
-              get_in(properties, ["interface", interface, "wifi", "access_points"])
+              Map.get(prop_map, ["interface", interface, "wifi", "access_points"])
             )
         })
       else

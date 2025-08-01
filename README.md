@@ -897,3 +897,8 @@ MIT License
 - [E-ink Display Datasheet](https://www.waveshare.com/wiki/2.9inch_e-Paper_Module) - Hardware specifications
 - [Circuits.SPI](https://github.com/elixir-circuits/circuits_spi) - SPI communication library
 - [Circuits.GPIO](https://github.com/elixir-circuits/circuits_gpio) - GPIO control library
+- [Raspberry Pi pinout](https://pinout.xyz)
+- [Waveshare E-Paper 2.9" Product Specifications](https://files.waveshare.com/upload/7/79/2.9inch-e-paper-v2-specification.pdf)
+
+[eink-frame]: https://www.printables.com/model/401112-frame-for-29-e-paper-waveshare-display-module/files
+[eink-rpi-case]: https://www.printables.com/model/159370-waveshare-29-inch-case-for-esphomehomeassistant-di

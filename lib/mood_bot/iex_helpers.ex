@@ -16,8 +16,6 @@ defmodule MoodBot.IExHelpers do
       iex> system_info()
   """
 
-  import IEx.Helpers, only: [h: 1]
-
   @doc """
   Scan for available WiFi networks.
 
@@ -206,7 +204,29 @@ defmodule MoodBot.IExHelpers do
         IO.puts("✓ Display cleared")
 
       {:error, reason} ->
-        IO.puts("✗ Failed to clear display: #{reason}")
+        IO.puts("✗ Failed to clear display: #{inspect(reason)}")
+    end
+
+    result
+  end
+
+  @doc """
+  Fill the e-ink display with black.
+
+  ## Examples
+
+      iex> display_fill_black()
+      :ok
+  """
+  def display_fill_black do
+    result = MoodBot.Display.fill_black()
+
+    case result do
+      :ok ->
+        IO.puts("✓ Display filled with black")
+
+      {:error, reason} ->
+        IO.puts("✗ Failed to fill display with black: #{reason}")
     end
 
     result
@@ -316,7 +336,7 @@ defmodule MoodBot.IExHelpers do
 
     # Get network interfaces (target-aware)
     interfaces =
-      if Mix.target() == :host do
+      if runtime_target() == :host do
         ["eth0", "wlan0"]
       else
         VintageNet.all_interfaces()
@@ -327,7 +347,7 @@ defmodule MoodBot.IExHelpers do
 
     info = %{
       hostname: hostname,
-      target: Mix.target(),
+      target: runtime_target(),
       interfaces: interfaces,
       memory: %{
         total: memory[:total],
@@ -338,11 +358,55 @@ defmodule MoodBot.IExHelpers do
 
     IO.puts("System Information:")
     IO.puts("  Hostname: #{hostname}")
-    IO.puts("  Target: #{Mix.target()}")
+    IO.puts("  Target: #{runtime_target()}")
     IO.puts("  Interfaces: #{Enum.join(interfaces, ", ")}")
     IO.puts("  Memory: #{format_bytes(memory[:total])}")
 
     info
+  end
+
+  # Runtime-safe target detection
+  defp runtime_target do
+    case Code.ensure_loaded(VintageNet) do
+      {:module, VintageNet} -> :target
+      {:error, _} -> :host
+    end
+  end
+
+  @doc """
+  Debug GPIO pins and show their status.
+
+  ## Examples
+
+      iex> gpio_debug()
+  """
+  def gpio_debug do
+    IO.puts("GPIO Backend Info:")
+    backend_info = Circuits.GPIO.backend_info()
+    IO.inspect(backend_info)
+
+    IO.puts("\nAvailable GPIOs:")
+    available_gpios = Circuits.GPIO.enumerate()
+    available_gpios |> Enum.take(10) |> Enum.each(&IO.inspect/1)
+
+    IO.puts("\nDisplay pins status (DC:22, RST:11, BUSY:18, CS:24):")
+
+    [11, 18, 22, 24]
+    |> Enum.each(fn pin ->
+      status =
+        case Circuits.GPIO.status(pin) do
+          {:ok, info} -> info
+          {:error, reason} -> "Error: #{inspect(reason)}"
+        end
+
+      IO.puts("  GPIO #{pin}: #{inspect(status)}")
+    end)
+
+    %{
+      backend: backend_info,
+      available_count: length(available_gpios),
+      display_pins: [11, 18, 22, 24]
+    }
   end
 
   @doc """
@@ -365,15 +429,17 @@ defmodule MoodBot.IExHelpers do
 
     🌐 Network Commands:
       network_status()                     - Show all network interfaces status
-      
+
     📺 Display Commands:
       display_init()                       - Initialize the display
       display_mood(:happy)                 - Show mood (:happy, :sad, :neutral, :angry, :surprised)
-      display_clear()                      - Clear the display
+      display_clear()                      - Clear the display to white
+      display_fill_black()                 - Fill the display with black
       display_status()                     - Show display status
 
     🔧 System Commands:
       system_info()                        - Show system information
+      gpio_debug()                         - Debug GPIO pins and show status
       help()                               - Show this help
 
     For more detailed help on any function, use: h(function_name)

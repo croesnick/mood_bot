@@ -12,7 +12,7 @@ config :logger, backends: [RingLogger]
 
 config :shoehorn,
   init: [:nerves_runtime, :nerves_pack],
-  app: Mix.Project.config()[:app]
+  app: :mood_bot
 
 # Erlinit can be configured without a rootfs_overlay. See
 # https://github.com/nerves-project/erlinit/ for more information on
@@ -99,17 +99,12 @@ config :mdns_lite,
 # Configure the e-ink display
 config :mood_bot, MoodBot.Display,
   spi_device: "spidev0.0",
-  # Data/Command pin (GPIO 22)
-  dc_pin: 22,
-  # Reset pin (GPIO 11)
-  rst_pin: 11,
-  # Busy signal pin (GPIO 18)
-  busy_pin: 18,
-  # Chip Select pin (GPIO 24)
-  cs_pin: 24
-
-# Import target specific config. This must remain at the bottom
-# of this file so it overrides the configuration defined above.
-# Uncomment to use target specific configurations
-
-# import_config "#{Mix.target()}.exs"
+  # For reference:
+  # https://www.waveshare.com/wiki/2.9inch_e-Paper_Module_Manual#Working_With_Raspberry_Pi
+  # https://github.com/waveshareteam/e-Paper/blob/04806a447b3d4a1f433d280311e86fa8e5f822cf/RaspberryPi_JetsonNano/python/lib/waveshare_epd/epdconfig.py#L41
+  # Using modern controller/offset tuples for GPIO specification
+  # cs_gpio: {"gpiochip0", 8},  # using automatic CS from spidev0.0
+  dc_gpio: {"gpiochip0", 25},
+  rst_gpio: {"gpiochip0", 17},
+  busy_gpio: {"gpiochip0", 24},
+  pwr_gpio: {"gpiochip0", 18}

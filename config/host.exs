@@ -5,7 +5,14 @@ import Config
 # Display configuration for development
 config :mood_bot, MoodBot.Display,
   # Enable bitmap saving in development for visual debugging
-  save_bitmaps: true
+  save_bitmaps: true,
+  # Required GPIO configuration (MockHAL doesn't use these but validation requires them)
+  spi_device: "spidev0.0",
+  # cs_gpio: {"gpiochip0", 8},
+  dc_gpio: {"gpiochip0", 25},
+  rst_gpio: {"gpiochip0", 17},
+  busy_gpio: {"gpiochip0", 24},
+  pwr_gpio: {"gpiochip0", 18}
 
 config :nerves_runtime,
   kv_backend:
