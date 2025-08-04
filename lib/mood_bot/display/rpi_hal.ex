@@ -17,12 +17,10 @@ defmodule MoodBot.Display.RpiHAL do
 
   @type config :: %{
           spi_device: String.t(),
-          # GPIO identifiers (can be pin numbers, labels, or {controller, offset} tuples)
           pwr_gpio: Circuits.GPIO.gpio_spec(),
           dc_gpio: Circuits.GPIO.gpio_spec(),
           rst_gpio: Circuits.GPIO.gpio_spec(),
           busy_gpio: Circuits.GPIO.gpio_spec()
-          # cs_gpio: Circuits.GPIO.gpio_spec() # Optional - commented out for automatic CS
         }
 
   typedstruct do
@@ -31,7 +29,6 @@ defmodule MoodBot.Display.RpiHAL do
     field(:dc_gpio, Circuits.GPIO.Handle.t())
     field(:rst_gpio, Circuits.GPIO.Handle.t())
     field(:busy_gpio, Circuits.GPIO.Handle.t())
-    # field(:cs_gpio, Circuits.GPIO.Handle.t()) # Commented out - using automatic CS
   end
 
   @impl true
@@ -47,24 +44,20 @@ defmodule MoodBot.Display.RpiHAL do
     Logger.debug("Initializing RpiHAL with config: #{inspect(config)}")
 
     # Validate configuration before attempting hardware initialization
-    # with :ok <- validate_spi_device(config.spi_device),
-    #      :ok <- validate_gpio_availability(config),
-    with {:ok, pwr_gpio} <- GPIO.open(config.pwr_gpio, :output),
+    with :ok <- validate_spi_device(config.spi_device),
+         :ok <- validate_gpio_availability(config),
+         {:ok, pwr_gpio} <- GPIO.open(config.pwr_gpio, :output),
          {:ok, dc_gpio} <- GPIO.open(config.dc_gpio, :output),
          {:ok, rst_gpio} <- GPIO.open(config.rst_gpio, :output),
          {:ok, busy_gpio} <- GPIO.open(config.busy_gpio, :input, pull_mode: :pulldown),
-         # FIXME Display may only be turned on in `Display.init/1`
          :ok <- GPIO.write(pwr_gpio, 1),
          {:ok, spi} <- SPI.open(config.spi_device, mode: 0, speed_hz: 4_000_000) do
-      # {:ok, cs_gpio} <- GPIO.open(config.cs_gpio, :output) do  # SPI comes with automatic CS handling -- don't need manual CS control
-
       state = %__MODULE__{
         spi: spi,
         pwr_gpio: pwr_gpio,
         dc_gpio: dc_gpio,
         rst_gpio: rst_gpio,
         busy_gpio: busy_gpio
-        # cs_gpio: cs_gpio  # using automatic CS handling
       }
 
       Logger.debug("RpiHAL initialized successfully")
@@ -80,7 +73,6 @@ defmodule MoodBot.Display.RpiHAL do
             dc: config.dc_gpio,
             rst: config.rst_gpio,
             busy: config.busy_gpio
-            # cs: config.cs_gpio
           ]
         )
 
@@ -102,14 +94,7 @@ defmodule MoodBot.Display.RpiHAL do
   end
 
   defp spi_write_chunk(state, data) do
-    # CS is handled automatically by spidev - no manual control needed
-    # GPIO.write(state.cs_gpio, 0)  # Commented out - using automatic CS
-    # Small delay for CS setup time (matching Python driver timing)
-    # Process.sleep(1)  # May not be needed with automatic CS
     result = SPI.transfer(state.spi, data)
-    # Small delay before CS release
-    # Process.sleep(1)  # May not be needed with automatic CS
-    # GPIO.write(state.cs_gpio, 1)  # Commented out - using automatic CS
 
     case result do
       {:ok, _response} ->
@@ -127,10 +112,6 @@ defmodule MoodBot.Display.RpiHAL do
 
   defp spi_write_chunked(state, data, _chunk_size) do
     Logger.debug("SPI: Chunked write of #{byte_size(data)} bytes in chunks")
-
-    # CS is handled automatically by spidev for each transfer
-    # GPIO.write(state.cs_gpio, 0)  # Commented out - using automatic CS
-    # Process.sleep(1)  # May not be needed with automatic CS
 
     result = spi_write_chunks(state, data, min(SPI.max_transfer_size(state.spi), 4000), 0)
 
@@ -252,7 +233,6 @@ defmodule MoodBot.Display.RpiHAL do
     GPIO.close(state.dc_gpio)
     GPIO.close(state.rst_gpio)
     GPIO.close(state.busy_gpio)
-    # GPIO.close(state.cs_gpio)  # Commented out - using automatic CS
     GPIO.close(state.pwr_gpio)
 
     SPI.close(state.spi)
@@ -301,7 +281,6 @@ defmodule MoodBot.Display.RpiHAL do
       {:dc_gpio, config.dc_gpio},
       {:rst_gpio, config.rst_gpio},
       {:busy_gpio, config.busy_gpio}
-      # {:cs_gpio, config.cs_gpio}  # Commented out - using automatic CS
     ]
 
     Enum.reduce_while(gpio_pins, :ok, fn {name, gpio_spec}, _acc ->

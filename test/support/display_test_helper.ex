@@ -48,10 +48,10 @@ defmodule MoodBot.DisplayTestHelper do
   def test_config do
     %{
       spi_device: "test_spi",
-      dc_pin: 99,
-      rst_pin: 98,
-      busy_pin: 97,
-      cs_pin: 96,
+      dc_gpio: 99,
+      rst_gpio: 98,
+      busy_gpio: 97,
+      pwr_gpio: 95,
       hal_module: MoodBot.DisplayTestHelper.TestHAL
     }
   end
@@ -62,10 +62,10 @@ defmodule MoodBot.DisplayTestHelper do
   def integration_config do
     %{
       spi_device: "test_spi",
-      dc_pin: 99,
-      rst_pin: 98,
-      busy_pin: 97,
-      cs_pin: 96,
+      dc_gpio: 99,
+      rst_gpio: 98,
+      busy_gpio: 97,
+      pwr_gpio: 95,
       hal_module: MoodBot.Display.MockHAL,
       save_bitmaps: true
     }

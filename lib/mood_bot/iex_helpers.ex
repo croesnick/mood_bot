@@ -253,7 +253,6 @@ defmodule MoodBot.IExHelpers do
 
     IO.puts("Display Status: #{state_icon} #{status.display_state}")
     IO.puts("  Initialized: #{status.initialized}")
-    IO.puts("  HAL Module: #{status.hal_module}")
 
     status
   end

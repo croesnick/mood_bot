@@ -14,12 +14,10 @@ defmodule MoodBot.Display.MockHAL do
 
   @type config :: %{
           spi_device: String.t(),
-          # GPIO identifiers (can be pin numbers, labels, or {controller, offset} tuples)
           pwr_gpio: Circuits.GPIO.gpio_spec(),
           dc_gpio: Circuits.GPIO.gpio_spec(),
           rst_gpio: Circuits.GPIO.gpio_spec(),
           busy_gpio: Circuits.GPIO.gpio_spec()
-          # cs_gpio: Circuits.GPIO.gpio_spec()
         }
 
   typedstruct do
@@ -200,7 +198,6 @@ defmodule MoodBot.Display.MockHAL do
       {:dc_gpio, config.dc_gpio, &valid_gpio_spec?/1, "valid GPIO specification"},
       {:rst_gpio, config.rst_gpio, &valid_gpio_spec?/1, "valid GPIO specification"},
       {:busy_gpio, config.busy_gpio, &valid_gpio_spec?/1, "valid GPIO specification"}
-      # {:cs_gpio, config.cs_gpio, &valid_gpio_spec?/1, "valid GPIO specification"}
     ]
 
     Enum.reduce_while(validations, :ok, fn {field_name, value, validator, type_name}, _acc ->

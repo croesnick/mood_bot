@@ -26,7 +26,6 @@ defmodule MoodBot.Display.HAL do
 
       config :mood_bot, MoodBot.Display,
         spi_device: "spidev0.0",
-        cs_gpio: {"gpiochip0", 8},
         dc_gpio: {"gpiochip0", 25},
         rst_gpio: {"gpiochip0", 17},
         busy_gpio: {"gpiochip0", 24},
@@ -72,7 +71,7 @@ defmodule MoodBot.Display.HAL do
   Set the Reset (RST) GPIO pin state.
 
   ## Parameters
-  - `state`: HAL state  
+  - `state`: HAL state
   - `value`: 0 for reset active, 1 for reset inactive
   """
   @callback gpio_set_rst(state :: hal_state(), value :: gpio_pin_value()) ::

@@ -9,10 +9,10 @@ defmodule MoodBot.Display.MockHALTest do
     setup do
       config = %{
         spi_device: "test_spi",
-        dc_pin: 25,
-        rst_pin: 17,
-        busy_pin: 24,
-        cs_pin: 8
+        dc_gpio: 25,
+        rst_gpio: 17,
+        busy_gpio: 24,
+        pwr_gpio: 18
       }
 
       %{config: config}

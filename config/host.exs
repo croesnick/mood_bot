@@ -8,11 +8,13 @@ config :mood_bot, MoodBot.Display,
   save_bitmaps: true,
   # Required GPIO configuration (MockHAL doesn't use these but validation requires them)
   spi_device: "spidev0.0",
-  # cs_gpio: {"gpiochip0", 8},
   dc_gpio: {"gpiochip0", 25},
   rst_gpio: {"gpiochip0", 17},
   busy_gpio: {"gpiochip0", 24},
   pwr_gpio: {"gpiochip0", 18}
+
+config :mood_bot, MoodBot.Display.Driver,
+  hal_module: MoodBot.Display.MockHAL
 
 config :nerves_runtime,
   kv_backend:

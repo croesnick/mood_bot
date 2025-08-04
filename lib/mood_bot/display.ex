@@ -31,7 +31,6 @@ defmodule MoodBot.Display do
 
       config :mood_bot, MoodBot.Display,
         spi_device: "spidev0.0",
-        cs_gpio: {"gpiochip0", 8},
         dc_gpio: {"gpiochip0", 25},
         rst_gpio: {"gpiochip0", 17},
         busy_gpio: {"gpiochip0", 24},
@@ -107,9 +106,7 @@ defmodule MoodBot.Display do
           dc_gpio: Circuits.GPIO.gpio_spec(),
           rst_gpio: Circuits.GPIO.gpio_spec(),
           busy_gpio: Circuits.GPIO.gpio_spec(),
-          # cs_gpio: Circuits.GPIO.gpio_spec(),
-          pwr_gpio: Circuits.GPIO.gpio_spec(),
-          hal_module: module()
+          pwr_gpio: Circuits.GPIO.gpio_spec()
         }
 
   @typedoc """
@@ -119,7 +116,6 @@ defmodule MoodBot.Display do
           initialized: boolean(),
           display_state: display_state(),
           refresh_state: refresh_state(),
-          hal_module: module(),
           config: map(),
           last_refresh_time: integer() | nil,
           last_activity_time: integer() | nil,
@@ -141,8 +137,7 @@ defmodule MoodBot.Display do
   @max_partial_updates_before_full_refresh 5
 
   defstruct [
-    :hal_module,
-    :hal_state,
+    :driver_state,
     :config,
     :display_state,
     initialized?: false,
@@ -170,7 +165,6 @@ defmodule MoodBot.Display do
 
       config :mood_bot, MoodBot.Display,
         spi_device: "spidev0.0",
-        cs_gpio: {"gpiochip0", 8},
         dc_gpio: {"gpiochip0", 25},
         rst_gpio: {"gpiochip0", 17},
         busy_gpio: {"gpiochip0", 24},
@@ -194,7 +188,6 @@ defmodule MoodBot.Display do
         dc_gpio: {"gpiochip0", 20},
         rst_gpio: {"gpiochip0", 17},
         busy_gpio: {"gpiochip0", 24},
-        cs_gpio: {"gpiochip0", 8},
         pwr_gpio: {"gpiochip0", 18}
       }
       {:ok, pid} = MoodBot.Display.start_link(config: config)
@@ -472,7 +465,6 @@ defmodule MoodBot.Display do
     config =
       app_config
       |> Map.merge(Keyword.get(opts, :config, %{}))
-      |> set_hal_module()
 
     # Validate that required configuration is provided
     case validate_config(config) do
@@ -483,31 +475,16 @@ defmodule MoodBot.Display do
 
         state = %__MODULE__{
           config: config,
-          hal_module: config.hal_module,
+          driver_state: nil,
           display_state: :stopped,
           last_activity_time: now,
           refresh_state: :idle_and_ready
         }
 
-        # Initialize HAL
-        case state.hal_module.init(config) do
-          {:ok, hal_state} ->
-            new_state =
-              %{state | hal_state: hal_state, display_state: :ready}
-              |> schedule_power_save_timer()
+        new_state = schedule_power_save_timer(state)
 
-            Logger.info("Display: GenServer started successfully")
-            {:ok, new_state}
-
-          {:error, reason} ->
-            Logger.error("Display: Failed to initialize HAL",
-              error: reason,
-              config: config,
-              hal_module: state.hal_module
-            )
-
-            {:stop, {:hal_init_failed, reason}}
-        end
+        Logger.info("Display: GenServer started successfully")
+        {:ok, new_state}
 
       {:error, reason} ->
         Logger.error("Display: Invalid configuration", error: reason, config: config)
@@ -526,14 +503,14 @@ defmodule MoodBot.Display do
 
     case validate_refresh_state(state) do
       :ok ->
-        case Driver.init(state.hal_module, state.hal_state) do
-          {:ok, hal_state} ->
+        case Driver.init(state.config) do
+          {:ok, driver_state} ->
             now = System.monotonic_time(:millisecond)
 
             new_state =
               %{
                 state
-                | hal_state: hal_state,
+                | driver_state: driver_state,
                   initialized?: true,
                   display_state: :initialized,
                   last_refresh_time: now
@@ -548,7 +525,6 @@ defmodule MoodBot.Display do
           {:error, reason} ->
             Logger.error("Display: Hardware initialization failed",
               error: reason,
-              hal_module: state.hal_module,
               display_state: state.display_state,
               initialized: state.initialized?
             )
@@ -590,12 +566,11 @@ defmodule MoodBot.Display do
 
         # case Driver.display_frame_full(
         case Driver.clear_display(
-               state.hal_module,
-               state.hal_state,
+               state.driver_state,
                data
              ) do
-          {:ok, hal_state} ->
-            new_state = perform_full_refresh_update(state, hal_state)
+          {:ok, driver_state} ->
+            new_state = perform_full_refresh_update(state, driver_state)
             Logger.info("Display: Clear complete - full refresh performed")
             {:reply, :ok, new_state}
 
@@ -642,12 +617,11 @@ defmodule MoodBot.Display do
         state = transition_to_state(state, :updating_display)
 
         case Driver.display_frame_full(
-               state.hal_module,
-               state.hal_state,
+               state.driver_state,
                black_data
              ) do
-          {:ok, hal_state} ->
-            new_state = perform_full_refresh_update(state, hal_state)
+          {:ok, driver_state} ->
+            new_state = perform_full_refresh_update(state, driver_state)
             Logger.info("Display: Fill black complete - full refresh performed")
             {:reply, :ok, new_state}
 
@@ -688,14 +662,12 @@ defmodule MoodBot.Display do
         operation_fn = fn needs_full ->
           if needs_full do
             Driver.display_frame_full(
-              state.hal_module,
-              state.hal_state,
+              state.driver_state,
               image_data
             )
           else
             Driver.display_frame_partial(
-              state.hal_module,
-              state.hal_state,
+              state.driver_state,
               image_data
             )
           end
@@ -732,25 +704,23 @@ defmodule MoodBot.Display do
           result =
             if needs_full do
               Driver.display_frame_full(
-                state.hal_module,
-                state.hal_state,
+                state.driver_state,
                 image_data
               )
             else
               Driver.display_frame_partial(
-                state.hal_module,
-                state.hal_state,
+                state.driver_state,
                 image_data
               )
             end
 
           case result do
-            {:ok, hal_state} ->
+            {:ok, driver_state} ->
               Logger.info(
                 "Display: #{if needs_full, do: "Full refresh", else: "Partial update"} complete for #{mood} mood"
               )
 
-              {:ok, hal_state}
+              {:ok, driver_state}
 
             error ->
               error
@@ -779,9 +749,9 @@ defmodule MoodBot.Display do
   def handle_call(:test_spi, _from, %{initialized?: true} = state) do
     Logger.info("Display: Testing SPI communication")
 
-    case Driver.test_spi_communication(state.hal_module, state.hal_state) do
-      {:ok, hal_state} ->
-        new_state = Map.put(state, :hal_state, hal_state)
+    case Driver.test_spi_communication(state.driver_state) do
+      {:ok, driver_state} ->
+        new_state = Map.put(state, :driver_state, driver_state)
         Logger.info("Display: SPI test successful")
         {:reply, :ok, new_state}
 
@@ -798,9 +768,9 @@ defmodule MoodBot.Display do
   def handle_call(:test_small_data, _from, %{initialized?: true} = state) do
     Logger.info("Display: Testing small data write")
 
-    case Driver.test_small_data_write(state.hal_module, state.hal_state) do
-      {:ok, hal_state} ->
-        new_state = Map.put(state, :hal_state, hal_state)
+    case Driver.test_small_data_write(state.driver_state) do
+      {:ok, driver_state} ->
+        new_state = Map.put(state, :driver_state, driver_state)
         Logger.info("Display: Small data write test successful")
         {:reply, :ok, new_state}
 
@@ -817,9 +787,9 @@ defmodule MoodBot.Display do
   def handle_call({:test_large_data, size}, _from, %{initialized?: true} = state) do
     Logger.info("Display: Testing large data write (#{size} bytes)")
 
-    case Driver.test_large_data_write(state.hal_module, state.hal_state, size) do
-      {:ok, hal_state} ->
-        new_state = Map.put(state, :hal_state, hal_state)
+    case Driver.test_large_data_write(state.driver_state, size) do
+      {:ok, driver_state} ->
+        new_state = Map.put(state, :driver_state, driver_state)
         Logger.info("Display: Large data write test successful (#{size} bytes)")
         {:reply, :ok, new_state}
 
@@ -836,12 +806,12 @@ defmodule MoodBot.Display do
   def handle_call(:sleep, _from, state) do
     Logger.info("Display: Entering sleep mode (manual)")
 
-    case Driver.sleep(state.hal_module, state.hal_state) do
-      {:ok, hal_state} ->
+    case Driver.sleep(state.driver_state) do
+      {:ok, driver_state} ->
         new_state =
           state
           |> transition_to_state(:power_saving)
-          |> Map.put(:hal_state, hal_state)
+          |> Map.put(:driver_state, driver_state)
           |> Map.put(:display_state, :sleeping)
 
         Logger.info("Display: Sleep mode entered successfully")
@@ -860,8 +830,7 @@ defmodule MoodBot.Display do
       initialized: state.initialized?,
       display_state: state.display_state,
       refresh_state: state.refresh_state,
-      hal_module: state.hal_module,
-      config: Map.drop(state.config, [:hal_module]),
+      config: state.config,
       # Timing information
       last_refresh_time: state.last_refresh_time,
       last_activity_time: state.last_activity_time,
@@ -902,11 +871,11 @@ defmodule MoodBot.Display do
 
     state = transition_to_state(state, :refreshing_screen)
 
-    case Driver.display_frame_full(state.hal_module, state.hal_state, white_data) do
-      {:ok, hal_state} ->
+    case Driver.display_frame_full(state.driver_state, white_data) do
+      {:ok, driver_state} ->
         updated_state =
           state
-          |> perform_full_refresh_update(hal_state)
+          |> perform_full_refresh_update(driver_state)
           |> Map.put(:refresh_timer_ref, nil)
 
         {:noreply, updated_state}
@@ -939,11 +908,11 @@ defmodule MoodBot.Display do
     state = transition_to_state(state, :power_saving)
 
     # Put display to sleep
-    case Driver.sleep(state.hal_module, state.hal_state) do
-      {:ok, hal_state} ->
+    case Driver.sleep(state.driver_state) do
+      {:ok, driver_state} ->
         updated_state =
           state
-          |> Map.put(:hal_state, hal_state)
+          |> Map.put(:driver_state, driver_state)
           |> Map.put(:power_save_timer_ref, nil)
 
         {:noreply, updated_state}
@@ -982,8 +951,8 @@ defmodule MoodBot.Display do
       Process.cancel_timer(state.power_save_timer_ref)
     end
 
-    if state.hal_state do
-      state.hal_module.close(state.hal_state)
+    if state.driver_state do
+      Driver.close(state.driver_state)
     end
 
     :ok
@@ -997,7 +966,6 @@ defmodule MoodBot.Display do
 
   # Configuration validation
   defp validate_config(config) do
-    # cs_gpio removed - using automatic CS
     required_keys = [:spi_device, :dc_gpio, :rst_gpio, :busy_gpio, :pwr_gpio]
     missing_keys = Enum.filter(required_keys, &(not Map.has_key?(config, &1)))
 
@@ -1035,22 +1003,22 @@ defmodule MoodBot.Display do
     end
   end
 
-  defp perform_full_refresh_update(state, hal_state) do
+  defp perform_full_refresh_update(state, driver_state) do
     now = System.monotonic_time(:millisecond)
 
     state
     |> transition_to_state(:idle_and_ready)
-    |> Map.put(:hal_state, hal_state)
+    |> Map.put(:driver_state, driver_state)
     |> Map.put(:last_refresh_time, now)
     |> Map.put(:partial_update_count, 0)
     |> schedule_refresh_timer()
     |> update_activity_time()
   end
 
-  defp perform_partial_refresh_update(state, hal_state) do
+  defp perform_partial_refresh_update(state, driver_state) do
     state
     |> transition_to_state(:idle_and_ready)
-    |> Map.put(:hal_state, hal_state)
+    |> Map.put(:driver_state, driver_state)
     |> Map.put(:partial_update_count, state.partial_update_count + 1)
     |> update_activity_time()
   end
@@ -1070,14 +1038,14 @@ defmodule MoodBot.Display do
     state = transition_to_state(state, :updating_display)
 
     case operation_fn.(needs_full) do
-      {:ok, hal_state} ->
+      {:ok, driver_state} ->
         new_state =
           if needs_full do
             Logger.info("Display: Full refresh complete")
-            perform_full_refresh_update(state, hal_state)
+            perform_full_refresh_update(state, driver_state)
           else
             Logger.info("Display: Partial update complete")
-            perform_partial_refresh_update(state, hal_state)
+            perform_partial_refresh_update(state, driver_state)
           end
 
         {:ok, new_state}
@@ -1174,16 +1142,6 @@ defmodule MoodBot.Display do
       state.partial_update_count >= @max_partial_updates_before_full_refresh -> true
       # Default to partial update
       true -> false
-    end
-  end
-
-  if Mix.target() == :host do
-    defp set_hal_module(config) do
-      Map.put_new(config, :hal_module, MoodBot.Display.MockHAL)
-    end
-  else
-    defp set_hal_module(config) do
-      Map.put_new(config, :hal_module, MoodBot.Display.RpiHAL)
     end
   end
 

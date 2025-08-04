@@ -31,7 +31,7 @@ defmodule MoodBot.DisplayIntegrationTest do
           # 1. Check initial status
           status = Display.status(display)
           assert status.initialized == false
-          assert status.display_state == :ready
+          assert status.display_state == :stopped
 
           # 2. Initialize display
           assert :ok = Display.init_display(display)
@@ -95,7 +95,9 @@ defmodule MoodBot.DisplayIntegrationTest do
 
           # 3. Try invalid image data
           invalid_data = <<1, 2, 3>>
-          assert {:error, :invalid_image_size} = Display.display_image(display, invalid_data)
+
+          assert {:error, {:operation_failed, :invalid_image_size}} =
+                   Display.display_image(display, invalid_data)
 
           # 4. Verify display still works after error
           assert :ok = Display.show_mood(display, :happy)
@@ -198,13 +200,15 @@ defmodule MoodBot.DisplayIntegrationTest do
     end
 
     test "configuration inheritance", %{display: display} do
+      # Initialize display to create driver_state and set hal_module
+      assert :ok = Display.init_display(display)
+
       status = Display.status(display)
 
       # Should have test configuration values
-      assert status.config.dc_pin == 99
-      assert status.config.rst_pin == 98
-      assert status.config.busy_pin == 97
-      assert status.config.cs_pin == 96
+      assert status.config.dc_gpio == 99
+      assert status.config.rst_gpio == 98
+      assert status.config.busy_gpio == 97
       assert status.config.spi_device == "test_spi"
 
       # HAL module is determined by Mix.target, not config - in test (host) it should be MockHAL

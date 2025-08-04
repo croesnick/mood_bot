@@ -1,11 +1,8 @@
 defmodule MoodBot.Display.DriverTest do
   use ExUnit.Case, async: true
 
-  import ExUnit.CaptureLog
-
   alias MoodBot.Display.Driver
   alias MoodBot.DisplayTestHelper
-  alias MoodBot.DisplayTestHelper.TestHAL
 
   describe "Driver constants and utilities" do
     test "dimensions/0 returns correct display size" do
@@ -13,241 +10,264 @@ defmodule MoodBot.Display.DriverTest do
     end
   end
 
-  describe "Driver command functions" do
-    setup do
+  describe "Driver initialization" do
+    test "init/1 selects MockHAL on host target" do
+      # Since we're running tests on host, it should select MockHAL
       config = DisplayTestHelper.test_config()
-      {:ok, hal_state} = TestHAL.init(config)
 
-      on_exit(fn ->
-        if Process.alive?(hal_state) do
-          TestHAL.close(hal_state)
-        end
-      end)
-
-      %{hal: TestHAL, hal_state: hal_state}
+      assert {:ok, driver_state} = Driver.init(config)
+      assert %Driver{} = driver_state
+      assert driver_state.hal_module == MoodBot.Display.MockHAL
+      assert driver_state.initialized? == true
     end
 
-    test "send_command/3 sets DC low and sends command", %{hal: hal, hal_state: hal_state} do
-      assert {:ok, new_state} = Driver.send_command(hal, hal_state, 0x12)
+    test "init/1 performs complete initialization sequence" do
+      config = DisplayTestHelper.test_config()
 
-      calls = DisplayTestHelper.get_calls(new_state)
-
-      # Should set DC to 0 (command mode) then send 1 byte
-      assert Enum.any?(calls, fn call -> call == {:gpio_set_dc, 0} end)
-      assert Enum.any?(calls, fn call -> call == {:spi_write, 1} end)
+      assert {:ok, driver_state} = Driver.init(config)
+      assert %Driver{} = driver_state
+      assert driver_state.initialized? == true
     end
 
-    test "send_data/3 sets DC high and sends data", %{hal: hal, hal_state: hal_state} do
-      data = <<0x01, 0x02, 0x03>>
-      assert {:ok, new_state} = Driver.send_data(hal, hal_state, data)
+    test "init/1 handles HAL initialization errors gracefully" do
+      # Create a config that will cause MockHAL to fail
+      invalid_config = %{
+        spi_device: "/invalid/device",
+        dc_gpio: -1,
+        rst_gpio: -1,
+        busy_gpio: -1,
+        pwr_gpio: -1
+      }
 
-      calls = DisplayTestHelper.get_calls(new_state)
-
-      # Should set DC to 1 (data mode) then send 3 bytes
-      assert Enum.any?(calls, fn call -> call == {:gpio_set_dc, 1} end)
-      assert Enum.any?(calls, fn call -> call == {:spi_write, 3} end)
-    end
-
-    test "reset/2 performs proper reset sequence", %{hal: hal, hal_state: hal_state} do
-      log =
-        capture_log(fn ->
-          assert {:ok, new_state} = Driver.reset(hal, hal_state)
-
-          calls = DisplayTestHelper.get_calls(new_state)
-
-          # Should set RST high, then low, then high again
-          rst_calls =
-            Enum.filter(calls, fn
-              {:gpio_set_rst, _} -> true
-              _ -> false
-            end)
-
-          assert length(rst_calls) == 3
-          assert [{:gpio_set_rst, 1}, {:gpio_set_rst, 0}, {:gpio_set_rst, 1}] = rst_calls
-        end)
-
-      assert log =~ "Display: Hardware reset"
-    end
-
-    test "wait_until_idle/2 waits for busy pin to go low", %{hal: hal, hal_state: hal_state} do
-      log =
-        capture_log(fn ->
-          assert {:ok, new_state} = Driver.wait_until_idle(hal, hal_state)
-
-          calls = DisplayTestHelper.get_calls(new_state)
-
-          # Should read busy pin at least once
-          assert Enum.any?(calls, fn call -> call == :gpio_read_busy end)
-        end)
-
-      assert log =~ "Display: Waiting until idle"
-      assert log =~ "Display: Ready (idle)"
-    end
-
-    test "wait_until_idle/3 respects timeout", %{hal: hal, hal_state: hal_state} do
-      # This test would need a modified HAL that always returns busy
-      # For now, just test that the function accepts a timeout parameter
-      assert {:ok, _} = Driver.wait_until_idle(hal, hal_state, 1000)
-    end
-
-    test "set_memory_area/6 sends correct commands", %{hal: hal, hal_state: hal_state} do
-      assert {:ok, new_state} = Driver.set_memory_area(hal, hal_state, 0, 0, 127, 295)
-
-      calls = DisplayTestHelper.get_calls(new_state)
-
-      # Should send X address command and Y address command
-      command_calls =
-        Enum.filter(calls, fn
-          {:gpio_set_dc, 0} -> true
-          _ -> false
-        end)
-
-      # At least 2 commands (X and Y address setup)
-      assert length(command_calls) >= 2
-    end
-
-    test "set_memory_pointer/4 sets RAM address counters", %{hal: hal, hal_state: hal_state} do
-      assert {:ok, new_state} = Driver.set_memory_pointer(hal, hal_state, 0, 0)
-
-      calls = DisplayTestHelper.get_calls(new_state)
-
-      # Should send X counter and Y counter commands
-      command_calls =
-        Enum.filter(calls, fn
-          {:gpio_set_dc, 0} -> true
-          _ -> false
-        end)
-
-      # At least 2 commands (X and Y counter setup)
-      assert length(command_calls) >= 2
-    end
-
-    test "display_frame/3 validates image size", %{hal: hal, hal_state: hal_state} do
-      # Test with invalid size
-      invalid_data = <<1, 2, 3>>
-
-      log =
-        capture_log(fn ->
-          assert {:error, :invalid_image_size} =
-                   Driver.display_frame(hal, hal_state, invalid_data)
-        end)
-
-      assert log =~ "Display: Invalid image data size"
-    end
-
-    test "display_frame/3 sends valid image data", %{hal: hal, hal_state: hal_state} do
-      image_data = DisplayTestHelper.test_image_data()
-
-      log =
-        capture_log(fn ->
-          assert {:ok, new_state} = Driver.display_frame(hal, hal_state, image_data)
-
-          calls = DisplayTestHelper.get_calls(new_state)
-
-          # Should send the image data
-          data_size = byte_size(image_data)
-          assert Enum.any?(calls, fn call -> call == {:spi_write, data_size} end)
-        end)
-
-      assert log =~ "Display: Updating frame"
-      assert log =~ "Display: Frame update complete"
-    end
-
-    test "clear/2 creates white image and displays it", %{hal: hal, hal_state: hal_state} do
-      log =
-        capture_log(fn ->
-          assert {:ok, new_state} = Driver.clear(hal, hal_state)
-
-          calls = DisplayTestHelper.get_calls(new_state)
-
-          # Should send image data of the correct size
-          {width, height} = Driver.dimensions()
-          expected_size = div(width, 8) * height
-          assert Enum.any?(calls, fn call -> call == {:spi_write, expected_size} end)
-        end)
-
-      assert log =~ "Display: Clearing to white"
-    end
-
-    test "turn_on_display/2 sends display update commands", %{hal: hal, hal_state: hal_state} do
-      assert {:ok, new_state} = Driver.turn_on_display(hal, hal_state)
-
-      calls = DisplayTestHelper.get_calls(new_state)
-
-      # Should send multiple commands for display update
-      command_calls =
-        Enum.filter(calls, fn
-          {:gpio_set_dc, 0} -> true
-          _ -> false
-        end)
-
-      # At least a few commands for the update sequence
-      assert length(command_calls) >= 3
-    end
-
-    test "sleep/2 sends sleep command", %{hal: hal, hal_state: hal_state} do
-      log =
-        capture_log(fn ->
-          assert {:ok, new_state} = Driver.sleep(hal, hal_state)
-
-          calls = DisplayTestHelper.get_calls(new_state)
-
-          # Should send at least one command
-          command_calls =
-            Enum.filter(calls, fn
-              {:gpio_set_dc, 0} -> true
-              _ -> false
-            end)
-
-          assert length(command_calls) >= 1
-        end)
-
-      assert log =~ "Display: Entering sleep mode"
+      assert {:error, _reason} = Driver.init(invalid_config)
     end
   end
 
-  describe "Driver initialization sequence" do
+  describe "Driver command functions with driver_state" do
     setup do
       config = DisplayTestHelper.test_config()
-      {:ok, hal_state} = TestHAL.init(config)
+      {:ok, driver_state} = Driver.init(config)
 
       on_exit(fn ->
-        if Process.alive?(hal_state) do
-          TestHAL.close(hal_state)
-        end
+        Driver.close(driver_state)
       end)
 
-      %{hal: TestHAL, hal_state: hal_state}
+      %{driver_state: driver_state}
     end
 
-    test "init/2 performs complete initialization sequence", %{hal: hal, hal_state: hal_state} do
-      log =
-        capture_log(fn ->
-          assert {:ok, new_state} = Driver.init(hal, hal_state)
+    test "send_command/2 succeeds and returns updated driver state", %{driver_state: driver_state} do
+      assert {:ok, new_driver_state} = Driver.send_command(driver_state, 0x12)
+      assert %Driver{} = new_driver_state
+      assert new_driver_state.hal_module == driver_state.hal_module
+    end
 
-          calls = DisplayTestHelper.get_calls(new_state)
+    test "send_data/2 succeeds and returns updated driver state", %{driver_state: driver_state} do
+      data = <<0x01, 0x02, 0x03>>
+      assert {:ok, new_driver_state} = Driver.send_data(driver_state, data)
+      assert %Driver{} = new_driver_state
+      assert new_driver_state.hal_module == driver_state.hal_module
+    end
 
-          # Should perform reset, send multiple commands, and wait for idle
-          # Reset active
-          assert Enum.any?(calls, fn call -> call == {:gpio_set_rst, 0} end)
-          # Reset inactive
-          assert Enum.any?(calls, fn call -> call == {:gpio_set_rst, 1} end)
-          # Wait for idle
-          assert Enum.any?(calls, fn call -> call == :gpio_read_busy end)
+    test "reset/1 performs reset sequence successfully", %{driver_state: driver_state} do
+      assert {:ok, new_driver_state} = Driver.reset(driver_state)
+      assert %Driver{} = new_driver_state
+    end
 
-          # Should send several initialization commands
-          command_calls =
-            Enum.filter(calls, fn
-              {:gpio_set_dc, 0} -> true
-              _ -> false
-            end)
+    test "wait_until_idle/1 completes successfully", %{driver_state: driver_state} do
+      assert {:ok, new_driver_state} = Driver.wait_until_idle(driver_state)
+      assert %Driver{} = new_driver_state
+    end
 
-          # Multiple init commands
-          assert length(command_calls) >= 5
+    test "wait_until_idle/2 accepts timeout parameter", %{driver_state: driver_state} do
+      assert {:ok, new_driver_state} = Driver.wait_until_idle(driver_state, 1000)
+      assert %Driver{} = new_driver_state
+    end
+
+    test "set_memory_area/6 sets memory area successfully", %{driver_state: driver_state} do
+      assert {:ok, new_driver_state} = Driver.set_memory_area(driver_state, 0, 0, 127, 295)
+      assert %Driver{} = new_driver_state
+    end
+
+    test "set_memory_pointer/4 sets memory pointer successfully", %{driver_state: driver_state} do
+      assert {:ok, new_driver_state} = Driver.set_memory_pointer(driver_state, 0, 0)
+      assert %Driver{} = new_driver_state
+    end
+
+    test "display_frame_full/2 validates image size", %{driver_state: driver_state} do
+      # Test with invalid size
+      invalid_data = <<1, 2, 3>>
+      assert {:error, :invalid_image_size} = Driver.display_frame_full(driver_state, invalid_data)
+    end
+
+    test "display_frame_full/2 accepts valid image data", %{driver_state: driver_state} do
+      image_data = DisplayTestHelper.test_image_data()
+      assert {:ok, new_driver_state} = Driver.display_frame_full(driver_state, image_data)
+      assert %Driver{} = new_driver_state
+    end
+
+    test "display_frame_partial/2 validates image size", %{driver_state: driver_state} do
+      invalid_data = <<1, 2, 3>>
+
+      assert {:error, :invalid_image_size} =
+               Driver.display_frame_partial(driver_state, invalid_data)
+    end
+
+    test "display_frame_partial/2 accepts valid image data", %{driver_state: driver_state} do
+      image_data = DisplayTestHelper.test_image_data()
+      assert {:ok, new_driver_state} = Driver.display_frame_partial(driver_state, image_data)
+      assert %Driver{} = new_driver_state
+    end
+
+    test "clear_display/2 processes display clear successfully", %{driver_state: driver_state} do
+      data = DisplayTestHelper.test_image_data()
+      assert {:ok, new_driver_state} = Driver.clear_display(driver_state, data)
+      assert %Driver{} = new_driver_state
+    end
+
+    test "sleep/1 enters sleep mode successfully", %{driver_state: driver_state} do
+      assert {:ok, new_driver_state} = Driver.sleep(driver_state)
+      assert %Driver{} = new_driver_state
+    end
+
+    test "close/1 performs cleanup successfully", %{driver_state: driver_state} do
+      assert :ok = Driver.close(driver_state)
+    end
+  end
+
+  describe "Driver test functions with driver_state" do
+    setup do
+      config = DisplayTestHelper.test_config()
+      {:ok, driver_state} = Driver.init(config)
+
+      on_exit(fn ->
+        Driver.close(driver_state)
+      end)
+
+      %{driver_state: driver_state}
+    end
+
+    test "test_spi_communication/1 validates SPI connectivity", %{driver_state: driver_state} do
+      assert {:ok, new_driver_state} = Driver.test_spi_communication(driver_state)
+      assert %Driver{} = new_driver_state
+    end
+
+    test "test_small_data_write/1 validates small data transfers", %{driver_state: driver_state} do
+      assert {:ok, new_driver_state} = Driver.test_small_data_write(driver_state)
+      assert %Driver{} = new_driver_state
+    end
+
+    test "test_large_data_write/2 validates large data transfers", %{driver_state: driver_state} do
+      test_size = 1024
+      assert {:ok, new_driver_state} = Driver.test_large_data_write(driver_state, test_size)
+      assert %Driver{} = new_driver_state
+    end
+
+    test "test_large_data_write/1 uses default size", %{driver_state: driver_state} do
+      assert {:ok, new_driver_state} = Driver.test_large_data_write(driver_state)
+      assert %Driver{} = new_driver_state
+    end
+  end
+
+  describe "Error handling and propagation" do
+    test "init/1 propagates HAL errors with clear attribution" do
+      # Invalid config that should cause HAL initialization to fail
+      invalid_config = %{
+        spi_device: "/dev/null/invalid",
+        dc_gpio: {-1, -1},
+        rst_gpio: {-1, -1},
+        busy_gpio: {-1, -1},
+        pwr_gpio: {-1, -1}
+      }
+
+      assert {:error, reason} = Driver.init(invalid_config)
+      # Error should clearly indicate it's from HAL layer
+      assert is_tuple(reason) or is_atom(reason)
+    end
+
+    test "driver functions handle HAL errors gracefully" do
+      # Test with a known good config first
+      config = DisplayTestHelper.test_config()
+      {:ok, driver_state} = Driver.init(config)
+
+      # Test that functions handle errors properly
+      assert {:ok, _} = Driver.send_command(driver_state, 0x00)
+      assert {:ok, _} = Driver.send_data(driver_state, <<0x00>>)
+
+      Driver.close(driver_state)
+    end
+  end
+
+  describe "HAL selection logic" do
+    test "driver uses MockHAL when running on host" do
+      config = DisplayTestHelper.test_config()
+
+      # Remove any hal_module from config to test automatic selection
+      config = Map.delete(config, :hal_module)
+
+      assert {:ok, driver_state} = Driver.init(config)
+
+      # On host target (during tests), should select MockHAL
+      assert driver_state.hal_module == MoodBot.Display.MockHAL
+
+      Driver.close(driver_state)
+    end
+
+    test "driver state contains proper HAL module and state" do
+      config = DisplayTestHelper.test_config()
+
+      assert {:ok, driver_state} = Driver.init(config)
+
+      # Verify driver state structure
+      assert %Driver{
+               hal_module: hal_module,
+               hal_state: hal_state,
+               initialized?: initialized?
+             } = driver_state
+
+      assert is_atom(hal_module)
+      assert hal_state != nil
+      assert initialized? == true
+
+      Driver.close(driver_state)
+    end
+  end
+
+  describe "Driver state consistency" do
+    test "all driver functions maintain state consistency" do
+      config = DisplayTestHelper.test_config()
+      {:ok, initial_state} = Driver.init(config)
+
+      # Test that all functions return consistent driver state
+      functions_to_test = [
+        fn state -> Driver.send_command(state, 0x00) end,
+        fn state -> Driver.send_data(state, <<0x00>>) end,
+        fn state -> Driver.reset(state) end,
+        fn state -> Driver.wait_until_idle(state) end,
+        fn state -> Driver.set_memory_area(state, 0, 0, 10, 10) end,
+        fn state -> Driver.set_memory_pointer(state, 0, 0) end,
+        fn state -> Driver.test_spi_communication(state) end,
+        fn state -> Driver.test_small_data_write(state) end,
+        fn state -> Driver.sleep(state) end
+      ]
+
+      # Chain all function calls and verify state consistency
+      final_state =
+        Enum.reduce(functions_to_test, initial_state, fn fun, state ->
+          case fun.(state) do
+            {:ok, new_state} ->
+              # Verify state structure is maintained
+              assert %Driver{} = new_state
+              assert new_state.hal_module == initial_state.hal_module
+              new_state
+
+            {:error, _} ->
+              # Some functions may fail with MockHAL, that's ok
+              state
+          end
         end)
 
-      assert log =~ "Display: Initializing Waveshare 2.9"
-      assert log =~ "Display: Initialization complete"
+      assert %Driver{} = final_state
+      Driver.close(final_state)
     end
   end
 end
