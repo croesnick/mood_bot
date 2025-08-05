@@ -97,26 +97,12 @@ defmodule MoodBot.Display do
           :not_initialized | :invalid_state | :timeout | :invalid_mood | :invalid_image_size
 
   @typedoc """
-  # FIXME Separation of concerns. Why does the displa module need to know about GPIO?
-  Configuration map for display hardware setup.
-  GPIO pins use controller/offset tuples per circuits_gpio specification.
-  """
-  @type config :: %{
-          spi_device: String.t(),
-          dc_gpio: Circuits.GPIO.gpio_spec(),
-          rst_gpio: Circuits.GPIO.gpio_spec(),
-          busy_gpio: Circuits.GPIO.gpio_spec(),
-          pwr_gpio: Circuits.GPIO.gpio_spec()
-        }
-
-  @typedoc """
   Display status information returned by status/1.
   """
   @type status_info :: %{
           initialized: boolean(),
           display_state: display_state(),
           refresh_state: refresh_state(),
-          config: map(),
           last_refresh_time: integer() | nil,
           last_activity_time: integer() | nil,
           partial_update_count: non_neg_integer(),
@@ -138,8 +124,8 @@ defmodule MoodBot.Display do
 
   defstruct [
     :driver_state,
-    :config,
     :display_state,
+    # TODO Rename to `active?`
     initialized?: false,
     # State machine tracking
     refresh_state: :idle_and_ready,
@@ -271,34 +257,6 @@ defmodule MoodBot.Display do
   end
 
   @doc """
-  Fill the display with black using full refresh.
-
-  Fills the entire display with black pixels and performs a full refresh cycle.
-  Useful for testing display functionality and creating high-contrast output.
-
-  ## Parameters
-  - `server` - GenServer name/pid (defaults to `#{__MODULE__}`)
-
-  ## Examples
-
-      :ok = MoodBot.Display.fill_black()
-
-  ## Returns
-  - `:ok` - Display filled successfully
-  - `{:error, :not_initialized}` - Display hardware not initialized
-  - `{:error, :invalid_state}` - Display not in correct state for operation
-  - `{:error, reason}` - Hardware operation failed
-
-  ## Timing
-  Full refresh operation takes approximately 15-20 seconds to complete.
-  """
-  @spec fill_black(GenServer.server()) ::
-          :ok | {:error, :not_initialized | :invalid_state | term()}
-  def fill_black(server \\ __MODULE__) do
-    GenServer.call(server, :fill_black, 30_000)
-  end
-
-  @doc """
   Display raw image data with automatic refresh strategy.
 
   Displays binary image data using either partial update (fast, ~2-3 seconds)
@@ -402,36 +360,20 @@ defmodule MoodBot.Display do
     GenServer.call(server, :sleep, 30_000)
   end
 
-  @doc """
-  Test basic SPI communication.
-
-  Sends a simple software reset command to verify SPI connectivity.
-  """
-  @spec test_spi(GenServer.server()) :: :ok | {:error, term()}
-  def test_spi(server \\ __MODULE__) do
-    GenServer.call(server, :test_spi, 5_000)
-  end
-
-  @doc """
-  Test small data write to display.
-
-  Writes a small amount of test data to verify data transfer capability.
-  """
-  @spec test_small_data(GenServer.server()) :: :ok | {:error, term()}
-  def test_small_data(server \\ __MODULE__) do
-    GenServer.call(server, :test_small_data, 5_000)
-  end
-
-  @doc """
-  Test large data write to display.
-
-  Writes progressively larger data chunks to find transfer limits and test chunked transfers.
-  """
-  @spec test_large_data(pos_integer(), GenServer.server()) :: :ok | {:error, term()}
-  def test_large_data(size \\ 1024, server \\ __MODULE__) do
-    GenServer.call(server, {:test_large_data, size}, 10_000)
-  end
-
+  @spec status() :: %{
+          display_state: :error | :initialized | :ready | :sleeping | :stopped,
+          initialized: boolean(),
+          last_activity_time: nil | integer(),
+          last_refresh_time: nil | integer(),
+          ms_since_last_activity: nil | integer(),
+          ms_since_last_refresh: nil | integer(),
+          next_power_save_in_ms: nil | integer(),
+          next_refresh_in_ms: nil | integer(),
+          partial_update_count: non_neg_integer(),
+          power_save_timer_active: boolean(),
+          refresh_state: :idle_and_ready | :power_saving | :refreshing_screen | :updating_display,
+          refresh_timer_active: boolean()
+        }
   @doc """
   Get comprehensive display status information.
 
@@ -456,40 +398,22 @@ defmodule MoodBot.Display do
   ## GenServer Callbacks
 
   @impl true
-  def init(opts) do
-    app_config =
-      :mood_bot
-      |> Application.get_env(__MODULE__, %{})
-      |> ensure_map()
+  def init(_opts) do
+    Logger.info("Display: Starting")
 
-    config =
-      app_config
-      |> Map.merge(Keyword.get(opts, :config, %{}))
+    now = System.monotonic_time(:millisecond)
 
-    # Validate that required configuration is provided
-    case validate_config(config) do
-      :ok ->
-        Logger.info("Display: Starting with config: #{inspect(config)}")
+    state = %__MODULE__{
+      driver_state: nil,
+      display_state: :stopped,
+      last_activity_time: now,
+      refresh_state: :idle_and_ready
+    }
 
-        now = System.monotonic_time(:millisecond)
+    new_state = schedule_power_save_timer(state)
 
-        state = %__MODULE__{
-          config: config,
-          driver_state: nil,
-          display_state: :stopped,
-          last_activity_time: now,
-          refresh_state: :idle_and_ready
-        }
-
-        new_state = schedule_power_save_timer(state)
-
-        Logger.info("Display: GenServer started successfully")
-        {:ok, new_state}
-
-      {:error, reason} ->
-        Logger.error("Display: Invalid configuration", error: reason, config: config)
-        {:stop, {:invalid_config, reason}}
-    end
+    Logger.info("Display: GenServer started successfully")
+    {:ok, new_state}
   end
 
   @impl true
@@ -503,7 +427,7 @@ defmodule MoodBot.Display do
 
     case validate_refresh_state(state) do
       :ok ->
-        case Driver.init(state.config) do
+        case Driver.init() do
           {:ok, driver_state} ->
             now = System.monotonic_time(:millisecond)
 
@@ -545,268 +469,68 @@ defmodule MoodBot.Display do
     end
   end
 
-  def handle_call(:clear, _from, %{initialized?: false} = state) do
-    {:reply, {:error, :not_initialized}, state}
-  end
-
-  def handle_call(:clear, _from, %{initialized?: true} = state) do
+  def handle_call(:clear, _from, state) do
     Logger.info("Display: Clearing display")
 
-    case validate_refresh_state(state) do
-      :ok ->
-        {width, height} = Driver.dimensions()
+    {width, height} = Driver.dimensions()
+    color = 0xFF
+    image_data = :binary.copy(<<color>>, div(width * height, 8))
 
-        color = 0xFF
-        data = :binary.copy(<<color>>, div(width * height, 8))
-
-        state =
-          state
-          # |> wake_from_power_saving()
-          |> transition_to_state(:updating_display)
-
-        # case Driver.display_frame_full(
-        case Driver.clear_display(
-               state.driver_state,
-               data
-             ) do
-          {:ok, driver_state} ->
-            new_state = perform_full_refresh_update(state, driver_state)
-            Logger.info("Display: Clear complete - full refresh performed")
-            {:reply, :ok, new_state}
-
-          {:error, reason} = _error ->
-            Logger.error("Display: Clear failed",
-              error: reason,
-              operation: :clear,
-              refresh_state: state.refresh_state,
-              partial_count: state.partial_update_count
-            )
-
-            new_state = transition_to_state(state, :idle_and_ready)
-            {:reply, {:error, {:clear_failed, reason}}, new_state}
-        end
-
+    with {:ok, state} <- validate_initialization(state),
+         {:ok, state} <- validate_refresh_state_monadic(state),
+         {:ok, state} <- ensure_display_is_active(state),
+         {:ok, state} <- perform_clear_operation(state, image_data) do
+      {:reply, :ok, state}
+    else
       {:error, reason} ->
-        Logger.error("Display: Invalid state for clear",
-          error: reason,
-          current_state: state.refresh_state,
-          display_state: state.display_state,
-          operation: :clear
-        )
-
-        {:reply, {:error, :invalid_state}, state}
+        Logger.error("Display: Clear operation failed", error: reason)
+        {:reply, {:error, reason}, state}
     end
   end
 
-  def handle_call(:fill_black, _from, %{initialized?: false} = state) do
-    {:reply, {:error, :not_initialized}, state}
-  end
-
-  def handle_call(:fill_black, _from, %{initialized?: true} = state) do
-    Logger.info("Display: Filling display with black")
-
-    case validate_refresh_state(state) do
-      :ok ->
-        # Fill black always uses full refresh
-        {width, height} = Driver.dimensions()
-        image_size = div(width, 8) * height
-        black_data = :binary.copy(<<0x00>>, image_size)
-
-        # Force wake from power saving and use full refresh
-        state = wake_from_power_saving(state)
-        state = transition_to_state(state, :updating_display)
-
-        case Driver.display_frame_full(
-               state.driver_state,
-               black_data
-             ) do
-          {:ok, driver_state} ->
-            new_state = perform_full_refresh_update(state, driver_state)
-            Logger.info("Display: Fill black complete - full refresh performed")
-            {:reply, :ok, new_state}
-
-          {:error, reason} = _error ->
-            Logger.error("Display: Fill black failed",
-              error: reason,
-              operation: :fill_black,
-              refresh_state: state.refresh_state,
-              partial_count: state.partial_update_count
-            )
-
-            new_state = transition_to_state(state, :idle_and_ready)
-            {:reply, {:error, {:fill_black_failed, reason}}, new_state}
-        end
-
-      {:error, reason} ->
-        Logger.error("Display: Invalid state for fill black",
-          error: reason,
-          current_state: state.refresh_state,
-          display_state: state.display_state,
-          operation: :fill_black
-        )
-
-        {:reply, {:error, :invalid_state}, state}
-    end
-  end
-
-  def handle_call({:display_image, _image_data}, _from, %{initialized?: false} = state) do
-    {:reply, {:error, :not_initialized}, state}
-  end
-
-  def handle_call({:display_image, image_data}, _from, %{initialized?: true} = state)
-      when is_binary(image_data) do
+  def handle_call({:display_image, image_data}, _from, state) when is_binary(image_data) do
     Logger.info("Display: Displaying image (#{byte_size(image_data)} bytes)")
 
-    case validate_refresh_state(state) do
-      :ok ->
-        operation_fn = fn needs_full ->
-          if needs_full do
-            Driver.display_frame_full(
-              state.driver_state,
-              image_data
-            )
-          else
-            Driver.display_frame_partial(
-              state.driver_state,
-              image_data
-            )
-          end
-        end
-
-        case handle_display_operation(state, operation_fn) do
-          {:ok, new_state} ->
-            {:reply, :ok, new_state}
-
-          {:error, new_state, reason} ->
-            {:reply, {:error, reason}, new_state}
-        end
-
+    with {:ok, state} <- validate_initialization(state),
+         {:ok, state} <- validate_refresh_state_monadic(state),
+         {:ok, state} <- ensure_display_is_active(state),
+         {:ok, state} <- perform_display_operation(state, image_data, "image display") do
+      {:reply, :ok, state}
+    else
       {:error, reason} ->
-        Logger.error("Display: Invalid state for image display: #{reason}")
-        {:reply, {:error, :invalid_state}, state}
+        Logger.error("Display: Image display operation failed", error: reason)
+        {:reply, {:error, reason}, state}
     end
   end
 
-  def handle_call({:show_mood, _mood}, _from, %{initialized?: false} = state) do
-    {:reply, {:error, :not_initialized}, state}
-  end
-
-  def handle_call({:show_mood, mood}, _from, %{initialized?: true} = state)
+  def handle_call({:show_mood, mood}, _from, state)
       when mood in [:happy, :sad, :neutral, :angry, :surprised] do
     Logger.info("Display: Showing mood: #{mood}")
 
-    case validate_refresh_state(state) do
-      :ok ->
-        # Generate simple mood indicator
-        image_data = generate_mood_image(mood)
+    # Generate simple mood indicator
+    image_data = generate_mood_image(mood)
 
-        operation_fn = fn needs_full ->
-          result =
-            if needs_full do
-              Driver.display_frame_full(
-                state.driver_state,
-                image_data
-              )
-            else
-              Driver.display_frame_partial(
-                state.driver_state,
-                image_data
-              )
-            end
-
-          case result do
-            {:ok, driver_state} ->
-              Logger.info(
-                "Display: #{if needs_full, do: "Full refresh", else: "Partial update"} complete for #{mood} mood"
-              )
-
-              {:ok, driver_state}
-
-            error ->
-              error
-          end
-        end
-
-        case handle_display_operation(state, operation_fn) do
-          {:ok, new_state} ->
-            {:reply, :ok, new_state}
-
-          {:error, new_state, reason} ->
-            {:reply, {:error, reason}, new_state}
-        end
-
+    with {:ok, state} <- validate_initialization(state),
+         {:ok, state} <- validate_refresh_state_monadic(state),
+         {:ok, state} <- ensure_display_is_active(state),
+         {:ok, state} <- perform_display_operation(state, image_data, "#{mood} mood") do
+      {:reply, :ok, state}
+    else
       {:error, reason} ->
-        Logger.error("Display: Invalid state for mood display: #{reason}")
-        {:reply, {:error, :invalid_state}, state}
+        Logger.error("Display: Mood display operation failed", error: reason, mood: mood)
+        {:reply, {:error, reason}, state}
     end
   end
 
-  def handle_call({:show_mood, invalid_mood}, _from, %{initialized?: true} = state) do
+  def handle_call({:show_mood, invalid_mood}, _from, state) do
     Logger.error("Display: Invalid mood: #{inspect(invalid_mood)}")
     {:reply, {:error, :invalid_mood}, state}
   end
 
-  def handle_call(:test_spi, _from, %{initialized?: true} = state) do
-    Logger.info("Display: Testing SPI communication")
-
-    case Driver.test_spi_communication(state.driver_state) do
-      {:ok, driver_state} ->
-        new_state = Map.put(state, :driver_state, driver_state)
-        Logger.info("Display: SPI test successful")
-        {:reply, :ok, new_state}
-
-      {:error, reason} ->
-        Logger.error("Display: SPI test failed: #{inspect(reason)}")
-        {:reply, {:error, reason}, state}
-    end
-  end
-
-  def handle_call(:test_spi, _from, %{initialized?: false} = state) do
-    {:reply, {:error, :not_initialized}, state}
-  end
-
-  def handle_call(:test_small_data, _from, %{initialized?: true} = state) do
-    Logger.info("Display: Testing small data write")
-
-    case Driver.test_small_data_write(state.driver_state) do
-      {:ok, driver_state} ->
-        new_state = Map.put(state, :driver_state, driver_state)
-        Logger.info("Display: Small data write test successful")
-        {:reply, :ok, new_state}
-
-      {:error, reason} ->
-        Logger.error("Display: Small data write test failed: #{inspect(reason)}")
-        {:reply, {:error, reason}, state}
-    end
-  end
-
-  def handle_call(:test_small_data, _from, %{initialized?: false} = state) do
-    {:reply, {:error, :not_initialized}, state}
-  end
-
-  def handle_call({:test_large_data, size}, _from, %{initialized?: true} = state) do
-    Logger.info("Display: Testing large data write (#{size} bytes)")
-
-    case Driver.test_large_data_write(state.driver_state, size) do
-      {:ok, driver_state} ->
-        new_state = Map.put(state, :driver_state, driver_state)
-        Logger.info("Display: Large data write test successful (#{size} bytes)")
-        {:reply, :ok, new_state}
-
-      {:error, reason} ->
-        Logger.error("Display: Large data write test failed (#{size} bytes): #{inspect(reason)}")
-        {:reply, {:error, reason}, state}
-    end
-  end
-
-  def handle_call({:test_large_data, _size}, _from, %{initialized?: false} = state) do
-    {:reply, {:error, :not_initialized}, state}
-  end
-
   def handle_call(:sleep, _from, state) do
-    Logger.info("Display: Entering sleep mode (manual)")
+    Logger.info("Display: Entering hibernate mode (user requested)")
 
-    case Driver.sleep(state.driver_state) do
+    case Driver.hibernate(state.driver_state) do
       {:ok, driver_state} ->
         new_state =
           state
@@ -830,7 +554,6 @@ defmodule MoodBot.Display do
       initialized: state.initialized?,
       display_state: state.display_state,
       refresh_state: state.refresh_state,
-      config: state.config,
       # Timing information
       last_refresh_time: state.last_refresh_time,
       last_activity_time: state.last_activity_time,
@@ -871,7 +594,7 @@ defmodule MoodBot.Display do
 
     state = transition_to_state(state, :refreshing_screen)
 
-    case Driver.display_frame_full(state.driver_state, white_data) do
+    case Driver.render_image(state.driver_state, white_data) do
       {:ok, driver_state} ->
         updated_state =
           state
@@ -907,8 +630,7 @@ defmodule MoodBot.Display do
 
     state = transition_to_state(state, :power_saving)
 
-    # Put display to sleep
-    case Driver.sleep(state.driver_state) do
+    case Driver.hibernate(state.driver_state) do
       {:ok, driver_state} ->
         updated_state =
           state
@@ -952,17 +674,14 @@ defmodule MoodBot.Display do
     end
 
     if state.driver_state do
-      Driver.close(state.driver_state)
+      %{hal_module: hal, hal_state: hal_state} = state.driver_state
+      hal.close(hal_state)
     end
 
     :ok
   end
 
   ## Private Functions
-
-  defp ensure_map(config) when is_map(config), do: config
-  defp ensure_map(config) when is_list(config), do: Enum.into(config, %{})
-  defp ensure_map(_), do: %{}
 
   # Configuration validation
   defp validate_config(config) do
@@ -992,14 +711,38 @@ defmodule MoodBot.Display do
     end
   end
 
-  defp wake_from_power_saving(state) do
+  defp ensure_display_is_active(state) do
     case state.refresh_state do
       :power_saving ->
         Logger.info("Display: Waking up from power saving mode")
-        transition_to_state(state, :idle_and_ready)
+
+        case Driver.init() do
+          {:ok, driver_state} ->
+            now = System.monotonic_time(:millisecond)
+
+            new_state =
+              state
+              |> Map.put(:driver_state, driver_state)
+              |> Map.put(:initialized?, true)
+              |> Map.put(:display_state, :initialized)
+              |> Map.put(:last_refresh_time, now)
+              |> transition_to_state(:idle_and_ready)
+
+            {:ok, new_state}
+
+          {:error, reason} ->
+            Logger.error("Display: Failed to wake from power saving mode", error: reason)
+
+            error_state =
+              state
+              |> Map.put(:display_state, :error)
+              |> Map.put(:initialized?, false)
+
+            {:error, error_state}
+        end
 
       _ ->
-        state
+        {:ok, state}
     end
   end
 
@@ -1021,51 +764,6 @@ defmodule MoodBot.Display do
     |> Map.put(:driver_state, driver_state)
     |> Map.put(:partial_update_count, state.partial_update_count + 1)
     |> update_activity_time()
-  end
-
-  defp handle_display_operation(state, operation_fn) do
-    # Common pattern for display operations
-    state = wake_from_power_saving(state)
-    needs_full = needs_full_refresh?(state)
-
-    Logger.info(
-      "Display: Using #{if needs_full, do: "full refresh", else: "partial update"}
-                 (#{state.partial_update_count} partials since last full,
-                  #{if state.last_refresh_time, do: "#{System.monotonic_time(:millisecond) - state.last_refresh_time}ms", else: "never"} since last refresh)"
-    )
-
-    # Set updating state
-    state = transition_to_state(state, :updating_display)
-
-    case operation_fn.(needs_full) do
-      {:ok, driver_state} ->
-        new_state =
-          if needs_full do
-            Logger.info("Display: Full refresh complete")
-            perform_full_refresh_update(state, driver_state)
-          else
-            Logger.info("Display: Partial update complete")
-            perform_partial_refresh_update(state, driver_state)
-          end
-
-        {:ok, new_state}
-
-      {:error, reason} ->
-        Logger.error("Display: Operation failed",
-          error: reason,
-          refresh_type: if(needs_full, do: :full_refresh, else: :partial_update),
-          refresh_state: state.refresh_state,
-          partial_count: state.partial_update_count,
-          last_refresh_ms_ago:
-            if(state.last_refresh_time,
-              do: System.monotonic_time(:millisecond) - state.last_refresh_time,
-              else: nil
-            )
-        )
-
-        new_state = transition_to_state(state, :idle_and_ready)
-        {:error, new_state, {:operation_failed, reason}}
-    end
   end
 
   # State validation functions
@@ -1099,6 +797,87 @@ defmodule MoodBot.Display do
       :ok
     else
       {:error, "Invalid refresh state: #{state.refresh_state}"}
+    end
+  end
+
+  # Monadic validation helpers
+  defp validate_initialization(state) do
+    if state.initialized? do
+      {:ok, state}
+    else
+      {:error, :not_initialized}
+    end
+  end
+
+  defp validate_refresh_state_monadic(state) do
+    case validate_refresh_state(state) do
+      :ok -> {:ok, state}
+      {:error, _reason} -> {:error, :invalid_state}
+    end
+  end
+
+  # Operation helper functions
+  defp perform_clear_operation(state, data) do
+    state = transition_to_state(state, :updating_display)
+
+    case Driver.clear(state.driver_state, data) do
+      {:ok, driver_state} ->
+        new_state = perform_full_refresh_update(state, driver_state)
+        Logger.info("Display: Clear complete - full refresh performed")
+        {:ok, new_state}
+
+      {:error, reason} ->
+        Logger.error("Display: Clear failed",
+          error: reason,
+          operation: :clear,
+          refresh_state: state.refresh_state,
+          partial_count: state.partial_update_count
+        )
+
+        {:error, {:clear_failed, reason}}
+    end
+  end
+
+  defp perform_display_operation(state, image_data, operation_name) do
+    needs_full = needs_full_refresh?(state)
+
+    Logger.info(
+      "Display: Using #{if needs_full, do: "full refresh", else: "partial update"}
+                 (#{state.partial_update_count} partials since last full,
+                  #{if state.last_refresh_time, do: "#{System.monotonic_time(:millisecond) - state.last_refresh_time}ms", else: "never"} since last refresh)"
+    )
+
+    state = transition_to_state(state, :updating_display)
+
+    operation_result =
+      if needs_full do
+        Driver.render_image(state.driver_state, image_data)
+      else
+        Driver.render_image_partial(state.driver_state, image_data)
+      end
+
+    case operation_result do
+      {:ok, driver_state} ->
+        new_state =
+          if needs_full do
+            Logger.info("Display: Full refresh complete for #{operation_name}")
+            perform_full_refresh_update(state, driver_state)
+          else
+            Logger.info("Display: Partial update complete for #{operation_name}")
+            perform_partial_refresh_update(state, driver_state)
+          end
+
+        {:ok, new_state}
+
+      {:error, reason} ->
+        Logger.error("Display: #{operation_name} failed",
+          error: reason,
+          refresh_type: if(needs_full, do: :full_refresh, else: :partial_update),
+          refresh_state: state.refresh_state,
+          partial_count: state.partial_update_count
+        )
+
+        {:error, {:operation_failed, reason}}
     end
   end
 

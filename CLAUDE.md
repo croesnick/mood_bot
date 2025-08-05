@@ -201,6 +201,83 @@ MoodBot.IExHelpers.gpio_debug()
 - **Detailed logging**: Include context and state information in log messages
 - **Validation functions**: Separate validation logic from business logic
 
+## Error Handling & Monadic Patterns
+
+This project uses **monadic-style error handling** as the standard pattern for all operations that can fail. This approach provides clean, composable error handling without nested conditionals.
+
+### Why Monadic Style?
+
+**Monadic style** follows the mathematical concept of monads from category theory, implementing "Railway-Oriented Programming":
+
+- **Success track**: `{:ok, value}` continues through the operation chain
+- **Error track**: `{:error, reason}` short-circuits and propagates the error
+- **Composition**: Operations chain together cleanly using `with` expressions
+
+### Benefits
+
+- **No nested error handling**: Flat, readable code structure
+- **Fail-fast behavior**: First error stops the entire chain
+- **Consistent patterns**: Same structure across all fallible operations
+- **Easy to extend**: Adding new validation steps is trivial
+- **Testable**: Each step can be tested independently
+
+### Standard Pattern
+
+All functions that can fail should return `{:ok, result}` | `{:error, reason}` tuples and use `with` for chaining:
+
+```elixir
+def handle_call(:operation, _from, state) do
+  with {:ok, state} <- validate_preconditions(state),
+       {:ok, state} <- ensure_resource_available(state),
+       {:ok, state} <- perform_main_operation(state),
+       {:ok, state} <- update_state_post_operation(state) do
+    {:reply, :ok, state}
+  else
+    {:error, reason} ->
+      Logger.error("Operation failed", error: reason)
+      {:reply, {:error, reason}, state}
+  end
+end
+```
+
+### Error Tuple Consistency
+
+Use consistent error tuple formats across the project:
+
+```elixir
+# Standard error formats
+{:error, :not_initialized}                    # Simple atoms for common cases
+{:error, :invalid_state}                      # State-related errors
+{:error, {:validation_failed, reason}}        # Nested tuples for context
+{:error, {:hardware_failure, hardware_error}} # Wrapped external errors
+{:error, {:operation_failed, operation_name}} # Operation-specific errors
+```
+
+### When NOT to Use Monadic Style
+
+- **Exceptions for truly exceptional cases**: Use `raise` for programming errors
+- **Simple operations with no failure modes**: Direct return values are fine
+- **Performance-critical hot paths**: Avoid tuple overhead if measured as bottleneck
+- **External API compatibility**: Match expected return formats
+
+### Integration with OTP
+
+This pattern works seamlessly with GenServer and OTP supervision:
+
+- **GenServer calls**: Return `{:reply, {:error, reason}, state}` on failure
+- **Supervisor restart**: Let it crash for unexpected errors, handle expected ones
+- **Error propagation**: Consistent error tuples up the supervision tree
+
+### Key Principles
+
+1. **Fail fast**: Return errors immediately rather than trying to recover
+2. **Consistent returns**: Always use `{:ok, result}` | `{:error, reason}` tuples
+3. **Chain operations**: Use `with` to compose fallible operations
+4. **Log contextually**: Include relevant context in error logs
+5. **Test thoroughly**: Cover both success and failure paths
+
+This monadic approach is the **standard pattern** for all new code in this project. When refactoring existing code, prioritize converting to this pattern for improved maintainability and reliability.
+
 ## Spec Workflow
 
 This project uses the automated Spec workflow for feature development, based on spec-driven methodology.

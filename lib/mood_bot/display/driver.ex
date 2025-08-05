@@ -39,7 +39,7 @@ defmodule MoodBot.Display.Driver do
       {:ok, hal_state} = Driver.init(hal_module, hal_state)
 
       # Display image with full refresh
-      {:ok, hal_state} = Driver.display_frame_full(hal_module, hal_state, image_data)
+      {:ok, hal_state} = Driver.render_image(hal_module, hal_state, image_data)
 
       # Put display to sleep
       {:ok, hal_state} = Driver.sleep(hal_module, hal_state)
@@ -51,6 +51,7 @@ defmodule MoodBot.Display.Driver do
   import Bitwise
 
   alias MoodBot.Display.HAL
+  alias MoodBot.Display.HAL.LookUpTables
 
   @typedoc """
   Driver state containing HAL module, HAL state, and initialization status.
@@ -60,8 +61,6 @@ defmodule MoodBot.Display.Driver do
     field(:hal_state, HAL.hal_state())
     field(:initialized?, boolean(), default: false)
   end
-
-  @hal Application.compile_env(:mood_bot, [__MODULE__, :hal_module])
 
   # Display specifications
   @width 128
@@ -103,6 +102,8 @@ defmodule MoodBot.Display.Driver do
   @command_write_vcom_register 0x2C
   # Load Look-Up Table for waveform control
   @command_write_lut_register 0x32
+  # TODO Find out what this command does (look up in fact sheet)
+  @command_partial_update 0x37
 
   # Voltage control commands
   # Gate voltage configuration
@@ -164,15 +165,24 @@ defmodule MoodBot.Display.Driver do
   ## Reference
   Based on [Python driver init sequence](https://github.com/waveshareteam/e-Paper/blob/master/RaspberryPi_JetsonNano/python/lib/waveshare_epd/epd2in9_V2.py#L144)
   """
-  @spec init(map()) :: {:ok, t()} | {:error, term()}
-  def init(config) when is_map(config) do
-    hal_module = @hal
+  @spec init() :: {:ok, t()} | {:error, term()}
+  def init() do
+    [hal_module: hal_module, spi_device: spi_device, gpio: gpio] =
+      Application.get_env(:mood_bot, __MODULE__)
+
+    hal_config = %{
+      spi_device: spi_device,
+      pwr_gpio: gpio.pwr_gpio,
+      dc_gpio: gpio.dc_gpio,
+      rst_gpio: gpio.rst_gpio,
+      busy_gpio: gpio.busy_gpio
+    }
 
     Logger.info(
-      "Display: Initializing Waveshare 2.9\" V2 e-ink display with #{inspect(hal_module)}"
+      "Driver: Initializing Waveshare 2.9\" V2 e-ink display with #{inspect(hal_module)}"
     )
 
-    case hal_module.init(config) do
+    case hal_module.init(hal_config) do
       {:ok, hal_state} ->
         driver_state = %__MODULE__{
           hal_module: hal_module,
@@ -186,7 +196,7 @@ defmodule MoodBot.Display.Driver do
             {:ok, final_state}
 
           {:error, reason} ->
-            Logger.error("Display: Hardware initialization failed",
+            Logger.error("Driver: Hardware initialization failed",
               error: reason,
               hal_module: hal_module
             )
@@ -195,7 +205,7 @@ defmodule MoodBot.Display.Driver do
         end
 
       {:error, reason} ->
-        Logger.error("Display: HAL initialization failed", error: reason, hal_module: hal_module)
+        Logger.error("Driver: HAL initialization failed", error: reason, hal_module: hal_module)
         {:error, {:hal_init_failed, reason}}
     end
   end
@@ -223,13 +233,148 @@ defmodule MoodBot.Display.Driver do
          {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x80>>),
          {:ok, hal_state} <- set_memory_pointer(hal, hal_state, 0, 0),
          {:ok, hal_state} <- wait_until_idle_hal(hal, hal_state),
-         {:ok, hal_state} <- set_lut_ws_20_30(hal, hal_state) do
-      Logger.info("Display: Hardware initialization complete")
+         {:ok, hal_state} <- set_lut(hal, hal_state, LookUpTables.wf_20_30()) do
+      Logger.info("Driver: Hardware initialization complete")
       {:ok, %{driver_state | hal_state: hal_state}}
     else
       {:error, reason} ->
-        Logger.error("Display: Hardware initialization failed", error: reason, hal_module: hal)
+        Logger.error("Driver: Hardware initialization failed", error: reason, hal_module: hal)
         {:error, {:hardware_init_failed, reason}}
+    end
+  end
+
+  @doc """
+  Initialize the display driver with fast initialization sequence.
+
+  Performs fast hardware initialization following the Python `init_Fast` sequence:
+  - Same core initialization as `init/1`
+  - Adds border waveform control command (0x3C with data 0x05)
+  - Uses WF_FULL LUT instead of WS_20_30 for faster refresh timing
+
+  This initialization method provides faster display updates at the cost of
+  potentially reduced image quality compared to the standard initialization.
+
+  ## Reference
+  Based on [Python driver init_Fast sequence](https://github.com/waveshareteam/e-Paper/blob/master/RaspberryPi_JetsonNano/python/lib/waveshare_epd/epd2in9_V2.py#L272)
+  """
+  @spec init_fast() :: {:ok, t()} | {:error, term()}
+  def init_fast() do
+    %{hal_module: hal_module, spi_device: spi_device, gpio: gpio} =
+      Application.get_env(:mood_bot, __MODULE__)
+
+    Logger.info("Driver: Initializing Waveshare 2.9\" V2 e-ink display with fast mode")
+
+    hal_config = %{
+      spi_device: spi_device,
+      pwr_gpio: gpio.pwr_gpio,
+      dc_gpio: gpio.dc_gpio,
+      rst_gpio: gpio.rst_gpio,
+      busy_gpio: gpio.busy_gpio
+    }
+
+    case hal_module.init(hal_config) do
+      {:ok, hal_state} ->
+        driver_state = %__MODULE__{
+          hal_module: hal_module,
+          hal_state: hal_state,
+          initialized?: false
+        }
+
+        case init_fast_display_hardware(driver_state) do
+          {:ok, updated_driver_state} ->
+            final_state = %{updated_driver_state | initialized?: true}
+            {:ok, final_state}
+
+          {:error, reason} ->
+            Logger.error("Driver: Fast hardware initialization failed",
+              error: reason,
+              hal_module: hal_module
+            )
+
+            {:error, {:init_fast_failed, reason}}
+        end
+
+      {:error, reason} ->
+        Logger.error("Driver: HAL initialization failed for fast mode",
+          error: reason,
+          hal_module: hal_module
+        )
+
+        {:error, {:hal_init_failed, reason}}
+    end
+  end
+
+  @spec init_fast_display_hardware(t()) :: {:ok, t()} | {:error, term()}
+  defp init_fast_display_hardware(driver_state) do
+    %{hal_module: hal, hal_state: hal_state} = driver_state
+
+    with {:ok, hal_state} <- reset_hal(hal, hal_state),
+         {:ok, hal_state} <- wait_until_idle_hal(hal, hal_state),
+         {:ok, hal_state} <-
+           send_command_hal(hal, hal_state, @command_software_reset),
+         {:ok, hal_state} <- wait_until_idle_hal(hal, hal_state),
+         {:ok, hal_state} <-
+           send_command_hal(hal, hal_state, @command_driver_output_control),
+         {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x27>>),
+         {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x01>>),
+         {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x00>>),
+         {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_data_entry_mode),
+         {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x03>>),
+         {:ok, hal_state} <- set_memory_area_hal(hal, hal_state, 0, 0, @width - 1, @height - 1),
+         {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_border_waveform_control),
+         {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x05>>),
+         {:ok, hal_state} <-
+           send_command_hal(hal, hal_state, @command_display_update_control_1),
+         {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x00>>),
+         {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x80>>),
+         {:ok, hal_state} <- set_memory_pointer(hal, hal_state, 0, 0),
+         {:ok, hal_state} <- wait_until_idle_hal(hal, hal_state),
+         {:ok, hal_state} <- set_lut(hal, hal_state, LookUpTables.wf_full()) do
+      Logger.info("Driver: Fast hardware initialization complete")
+      {:ok, %{driver_state | hal_state: hal_state}}
+    else
+      {:error, reason} ->
+        Logger.error("Driver: Fast hardware initialization failed",
+          error: reason,
+          hal_module: hal
+        )
+
+        {:error, {:hardware_init_fast_failed, reason}}
+    end
+  end
+
+  @doc """
+  Put display into deep sleep mode.
+
+  Sends the deep sleep command (0x10) with activation data (0x01).
+  In sleep mode, the display consumes minimal power while retaining the last displayed image.
+
+  To reactivate the display, call `activate/1` again.
+
+  ## Reference
+  Based on [Python driver sleep sequence](https://github.com/waveshareteam/e-Paper/blob/master/RaspberryPi_JetsonNano/python/lib/waveshare_epd/epd2in9_V2.py#L520)
+  """
+  @spec hibernate(t()) :: {:ok, t()} | {:error, term()}
+  def hibernate(%__MODULE__{} = driver_state) do
+    %{hal_module: hal, hal_state: hal_state} = driver_state
+
+    case hibernate_hal(hal, hal_state) do
+      {:ok, new_hal_state} ->
+        {:ok, %{driver_state | hal_state: new_hal_state}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp hibernate_hal(hal, hal_state) do
+    Logger.debug("Driver: Entering deep sleep mode")
+
+    with {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_deep_sleep_mode),
+         {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x01>>),
+         {:ok, hal_state} <- hal.sleep(hal_state, 2_000),
+         {:ok, hal_state} <- hal.close(hal_state) do
+      {:ok, hal_state}
     end
   end
 
@@ -241,7 +386,7 @@ defmodule MoodBot.Display.Driver do
   def reset(%__MODULE__{} = driver_state) do
     %{hal_module: hal, hal_state: hal_state} = driver_state
 
-    Logger.debug("Display: Hardware reset")
+    Logger.debug("Driver: Hardware reset")
 
     with {:ok, hal_state} <- reset_hal(hal, hal_state) do
       {:ok, %{driver_state | hal_state: hal_state}}
@@ -252,7 +397,7 @@ defmodule MoodBot.Display.Driver do
   end
 
   defp reset_hal(hal, hal_state) do
-    Logger.debug("Display: Hardware reset")
+    Logger.debug("Driver: Hardware reset")
 
     with {:ok, hal_state} <- hal.gpio_set_rst(hal_state, 1),
          :ok <- hal.sleep(50),
@@ -270,13 +415,9 @@ defmodule MoodBot.Display.Driver do
   Continuously polls the BUSY pin until it goes LOW, indicating the display
   has finished processing the previous command. Essential for proper timing
   between commands to prevent display corruption.
-
-  ## Parameters
-  - `driver_state` - Driver state containing HAL module and state
-  - `timeout_ms` - Maximum wait time in milliseconds (default: 15,000)
   """
   defp wait_until_idle_hal(hal, hal_state, timeout_ms \\ 15_000) do
-    Logger.debug("Display: Busy")
+    Logger.debug("Driver: Busy")
 
     case wait_until_idle_loop(hal, hal_state, timeout_ms, System.monotonic_time(:millisecond)) do
       {:ok, new_hal_state} ->
@@ -291,7 +432,7 @@ defmodule MoodBot.Display.Driver do
     current_time = System.monotonic_time(:millisecond)
 
     if current_time - start_time > timeout_ms do
-      Logger.error("Display: Timeout waiting for idle state",
+      Logger.error("Driver: Timeout waiting for idle state",
         timeout_ms: timeout_ms,
         elapsed_ms: current_time - start_time,
         hal_module: hal
@@ -301,7 +442,7 @@ defmodule MoodBot.Display.Driver do
     else
       case hal.gpio_read_busy(hal_state) do
         {:ok, 0, hal_state} ->
-          Logger.debug("Display: Ready (idle)")
+          Logger.debug("Driver: Ready (idle)")
           {:ok, hal_state}
 
         {:ok, 1, hal_state} ->
@@ -315,7 +456,7 @@ defmodule MoodBot.Display.Driver do
   end
 
   defp send_command_hal(hal, hal_state, command) when is_integer(command) do
-    Logger.debug("Display: Sending command 0x#{Integer.to_string(command, 16)}")
+    Logger.debug("Driver: Sending command 0x#{Integer.to_string(command, 16)}")
 
     # FIXME Instead of gpio_set_dc, we could have a hal.gpio_set_command_mode/1.
     #       And similarly, a hal.gpio_set_data_mode/1.
@@ -327,7 +468,7 @@ defmodule MoodBot.Display.Driver do
   end
 
   defp send_data_hal(hal, hal_state, data) when is_binary(data) do
-    Logger.debug("Display: Sending #{byte_size(data)} bytes of data")
+    Logger.debug("Driver: Sending #{byte_size(data)} bytes of data")
 
     with {:ok, hal_state} <- hal.gpio_set_dc(hal_state, 1),
          {:ok, hal_state} <- hal.spi_write(hal_state, data) do
@@ -337,7 +478,7 @@ defmodule MoodBot.Display.Driver do
 
   # Set the memory area for writing.
   defp set_memory_area_hal(hal, hal_state, x_start, y_start, x_end, y_end) do
-    Logger.debug("Display: Setting memory area",
+    Logger.debug("Driver: Setting memory area",
       x_start: x_start,
       y_start: y_start,
       x_end: x_end,
@@ -360,7 +501,7 @@ defmodule MoodBot.Display.Driver do
 
   # Set the memory pointer for writing.
   defp set_memory_pointer(hal, hal_state, x, y) do
-    Logger.debug("Display: Setting memory pointer",
+    Logger.debug("Driver: Setting memory pointer",
       x: x,
       y: y
     )
@@ -376,19 +517,13 @@ defmodule MoodBot.Display.Driver do
   end
 
   @doc """
-  Display image data using partial update (new driver state interface).
-
-  ## Parameters
-  - `driver_state` - Driver state containing HAL module and state
-  - `image_data` - Binary image data (4736 bytes for 128×296 display)
+  Render image data with full display refresh.
   """
-  @spec display_frame_partial(t(), binary()) ::
-          {:ok, t()} | {:error, :invalid_image_size | term()}
-  def display_frame_partial(%__MODULE__{} = driver_state, image_data)
-      when is_binary(image_data) do
+  @spec render_image(t(), binary()) :: {:ok, t()} | {:error, :invalid_image_size | term()}
+  def render_image(%__MODULE__{} = driver_state, image_data) when is_binary(image_data) do
     %{hal_module: hal, hal_state: hal_state} = driver_state
 
-    case display_frame_partial_hal(hal, hal_state, image_data) do
+    case render_image_hal(hal, hal_state, image_data) do
       {:ok, new_hal_state} ->
         {:ok, %{driver_state | hal_state: new_hal_state}}
 
@@ -397,64 +532,96 @@ defmodule MoodBot.Display.Driver do
     end
   end
 
-  defp display_frame_partial_hal(hal, hal_state, image_data) when is_binary(image_data) do
-    Logger.debug("Display: Updating frame with partial update - #{byte_size(image_data)} bytes")
-
-    expected_size = div(@width, 8) * @height
-
-    if byte_size(image_data) != expected_size do
-      Logger.error(
-        "Display: Invalid image data size. Expected #{expected_size}, got #{byte_size(image_data)}"
-      )
-
-      {:error, :invalid_image_size}
-    else
-      with {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_write_ram),
-           {:ok, hal_state} <- send_data_hal(hal, hal_state, image_data),
-           {:ok, hal_state} <- partial_update_hal(hal, hal_state) do
-        Logger.debug("Display: Partial frame update complete")
-        {:ok, hal_state}
-      end
-    end
-  end
-
-  @doc """
-  Display image data with full refresh (new driver state interface).
-
-  ## Parameters
-  - `driver_state` - Driver state containing HAL module and state
-  - `image_data` - Binary image data (exactly 4736 bytes)
-  """
-  @spec display_frame_full(t(), binary()) :: {:ok, t()} | {:error, :invalid_image_size | term()}
-  def display_frame_full(%__MODULE__{} = driver_state, image_data) when is_binary(image_data) do
-    %{hal_module: hal, hal_state: hal_state} = driver_state
-
-    case display_frame_full_hal(hal, hal_state, image_data) do
-      {:ok, new_hal_state} ->
-        {:ok, %{driver_state | hal_state: new_hal_state}}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  defp display_frame_full_hal(hal, hal_state, image_data) when is_binary(image_data) do
-    Logger.debug("Display: Updating frame with full refresh - #{byte_size(image_data)} bytes")
+  defp render_image_hal(hal, hal_state, image_data) when is_binary(image_data) do
+    Logger.debug(
+      "Driver: Drawing image with full display refresh - #{byte_size(image_data)} bytes"
+    )
 
     expected_size = div(@width, 8) * @height
 
     # FIXME Can't this be handled by proper typing?
     if byte_size(image_data) != expected_size do
       Logger.error(
-        "Display: Invalid image data size. Expected #{expected_size}, got #{byte_size(image_data)}"
+        "Driver: Invalid image data size. Expected #{expected_size}, got #{byte_size(image_data)}"
       )
 
       {:error, :invalid_image_size}
     else
       with {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_write_ram),
            {:ok, hal_state} <- send_data_hal(hal, hal_state, image_data),
-           {:ok, hal_state} <- full_refresh_hal(hal, hal_state) do
-        Logger.debug("Display: Full frame refresh complete")
+           {:ok, hal_state} <- turn_on_display_hal(hal, hal_state) do
+        Logger.debug("Driver: Completed image rendering with full refresh")
+        {:ok, hal_state}
+      end
+    end
+  end
+
+  @doc """
+  Display image data using partial display update.
+  """
+  @spec render_image_partial(t(), binary()) ::
+          {:ok, t()} | {:error, :invalid_image_size | term()}
+  def render_image_partial(%__MODULE__{} = driver_state, image_data)
+      when is_binary(image_data) do
+    %{hal_module: hal, hal_state: hal_state} = driver_state
+
+    case render_image_partial_hal(hal, hal_state, image_data) do
+      {:ok, new_hal_state} ->
+        {:ok, %{driver_state | hal_state: new_hal_state}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp render_image_partial_hal(hal, hal_state, image_data) when is_binary(image_data) do
+    Logger.debug(
+      "Driver: Drawing image with partial display refresh - #{byte_size(image_data)} bytes"
+    )
+
+    expected_size = div(@width, 8) * @height
+
+    if byte_size(image_data) != expected_size do
+      Logger.error(
+        "Driver: Invalid image data size. Expected #{expected_size}, got #{byte_size(image_data)}"
+      )
+
+      {:error, :invalid_image_size}
+    else
+      with {:ok, hal_state} <- hal.gpio_set_rst(hal_state, 0),
+           :ok <- hal.sleep(2),
+           {:ok, hal_state} <- hal.gpio_set_rst(hal_state, 1),
+           :ok <- hal.sleep(2),
+           # ...
+           {:ok, hal_state} <- set_lut(hal, hal_state, LookUpTables.wf_partial()),
+           {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_partial_update),
+           {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x00>>),
+           {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x00>>),
+           {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x00>>),
+           {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x00>>),
+           {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x00>>),
+           {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x40>>),
+           {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x00>>),
+           {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x00>>),
+           {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x00>>),
+           {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x00>>),
+           # ...
+           {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_border_waveform_control),
+           {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x80>>),
+           # ...
+           {:ok, hal_state} <-
+             send_command_hal(hal, hal_state, @command_display_update_control_2),
+           {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0xC0>>),
+           {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_master_activation),
+           {:ok, hal_state} <- wait_until_idle_hal(hal, hal_state),
+           # ...
+           {:ok, hal_state} <- set_memory_area_hal(hal, hal_state, 0, 0, @width - 1, @height - 1),
+           {:ok, hal_state} <- set_memory_pointer(hal, hal_state, 0, 0),
+           # ...
+           {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_write_ram_bw),
+           {:ok, hal_state} <- send_data_hal(hal, hal_state, image_data),
+           {:ok, hal_state} <- turn_on_display_partial_hal(hal, hal_state) do
+        Logger.debug("Driver: Completed image rendering with partial refresh")
         {:ok, hal_state}
       end
     end
@@ -463,11 +630,11 @@ defmodule MoodBot.Display.Driver do
   @doc """
   Clear display with specified image data (new driver state interface).
   """
-  @spec clear_display(t(), binary()) :: {:ok, t()} | {:error, term()}
-  def clear_display(%__MODULE__{} = driver_state, image_data) when is_binary(image_data) do
+  @spec clear(t(), binary()) :: {:ok, t()} | {:error, term()}
+  def clear(%__MODULE__{} = driver_state, image_data) when is_binary(image_data) do
     %{hal_module: hal, hal_state: hal_state} = driver_state
 
-    case clear_display_hal(hal, hal_state, image_data) do
+    case clear_hal(hal, hal_state, image_data) do
       {:ok, new_hal_state} ->
         {:ok, %{driver_state | hal_state: new_hal_state}}
 
@@ -476,8 +643,8 @@ defmodule MoodBot.Display.Driver do
     end
   end
 
-  defp clear_display_hal(hal, hal_state, image_data) when is_binary(image_data) do
-    Logger.debug("Display: clearing display")
+  defp clear_hal(hal, hal_state, image_data) when is_binary(image_data) do
+    Logger.debug("Driver: clearing display")
 
     with {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_write_ram_bw),
          {:ok, hal_state} <- send_data_hal(hal, hal_state, image_data),
@@ -485,7 +652,7 @@ defmodule MoodBot.Display.Driver do
          {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_write_ram_red),
          {:ok, hal_state} <- send_data_hal(hal, hal_state, image_data),
          {:ok, hal_state} <- turn_on_display_hal(hal, hal_state) do
-      Logger.debug("Display: Full frame refresh complete")
+      Logger.debug("Driver: Full frame refresh complete")
       {:ok, hal_state}
     end
   end
@@ -495,259 +662,27 @@ defmodule MoodBot.Display.Driver do
          {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0xC7>>),
          {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_master_activation),
          {:ok, hal_state} <- wait_until_idle_hal(hal, hal_state) do
-      Logger.debug("Display: Turned display on")
+      Logger.debug("Driver: Turned display on")
       {:ok, hal_state}
     end
   end
 
-  defp partial_update_hal(hal, hal_state) do
-    Logger.debug("Display: Performing partial update")
-
+  defp turn_on_display_partial_hal(hal, hal_state) do
     with {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_display_update_control_2),
          {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x0F>>),
          {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_master_activation),
-         {:ok, hal_state} <-
-           send_command_hal(hal, hal_state, @command_terminate_frame_read_write),
          {:ok, hal_state} <- wait_until_idle_hal(hal, hal_state) do
+      Logger.debug("Driver: Turned display on (partially)")
       {:ok, hal_state}
     end
   end
 
-  defp full_refresh_hal(hal, hal_state) do
-    Logger.debug("Display: Performing full refresh")
-
-    with {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_display_update_control_2),
-         {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x00>>),
-         {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_master_activation),
-         {:ok, hal_state} <-
-           send_command_hal(hal, hal_state, @command_terminate_frame_read_write),
-         {:ok, hal_state} <- wait_until_idle_hal(hal, hal_state) do
-      {:ok, hal_state}
-    end
-  end
-
-  @doc """
-  Put display into deep sleep mode (new driver state interface).
-
-  Sends the deep sleep command (0x10) with activation data (0x01) as specified
-  in DRIVER.md. In sleep mode, the display consumes minimal power while
-  retaining the last displayed image.
-
-  ## Parameters
-  - `driver_state` - Driver state containing HAL module and state
-
-  ## Reference
-  Based on [Python driver sleep sequence](https://github.com/waveshareteam/e-Paper/blob/master/RaspberryPi_JetsonNano/python/lib/waveshare_epd/epd2in9_V2.py#L520)
-  """
-  @spec sleep(t()) :: {:ok, t()} | {:error, term()}
-  def sleep(%__MODULE__{} = driver_state) do
-    %{hal_module: hal, hal_state: hal_state} = driver_state
-
-    case sleep_hal(hal, hal_state) do
-      {:ok, new_hal_state} ->
-        {:ok, %{driver_state | hal_state: new_hal_state}}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  defp sleep_hal(hal, hal_state) do
-    Logger.debug("Display: Entering sleep mode")
-
-    with {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_deep_sleep_mode),
-         {:ok, hal_state} <- send_data_hal(hal, hal_state, <<0x01>>) do
-      {:ok, hal_state}
-    end
-  end
-
-  @doc """
-  Close and cleanup driver resources (new driver state interface).
-  """
-  @spec close(t()) :: :ok
-  def close(%__MODULE__{} = driver_state) do
-    %{hal_module: hal, hal_state: hal_state} = driver_state
-
-    try do
-      hal.close(hal_state)
-    catch
-      kind, reason ->
-        Logger.warning("Driver: HAL cleanup failed",
-          error: {kind, reason},
-          hal_module: hal
-        )
-    end
-
-    :ok
-  end
-
-  defp set_lut_ws_20_30(hal, hal_state) do
-    Logger.debug("Display: Setting LUT WS_20_30")
-
-    lut_data = <<
-      0x80,
-      0x66,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x40,
-      0x0,
-      0x0,
-      0x0,
-      0x10,
-      0x66,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x20,
-      0x0,
-      0x0,
-      0x0,
-      0x80,
-      0x66,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x40,
-      0x0,
-      0x0,
-      0x0,
-      0x10,
-      0x66,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x20,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x14,
-      0x8,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x2,
-      0xA,
-      0xA,
-      0x0,
-      0xA,
-      0xA,
-      0x0,
-      0x1,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x14,
-      0x8,
-      0x0,
-      0x1,
-      0x0,
-      0x0,
-      0x1,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x1,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x0,
-      0x44,
-      0x44,
-      0x44,
-      0x44,
-      0x44,
-      0x44,
-      0x0,
-      0x0,
-      0x0,
-      0x22,
-      0x17,
-      0x41,
-      0x0,
-      0x32,
-      0x36
-    >>
+  @spec set_lut(module(), t(), binary()) :: {:ok, t()} | {:error, term()}
+  defp set_lut(hal, hal_state, lut) do
+    Logger.debug("Driver: Setting LUT")
 
     # Convert to list for easy indexed access
-    lut_bytes = :binary.bin_to_list(lut_data)
+    lut_bytes = :binary.bin_to_list(lut)
 
     with {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_write_lut_register),
          {:ok, hal_state} <- send_lut_bytes_individually(hal, hal_state, lut_bytes, 0, 152),

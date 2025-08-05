@@ -167,66 +167,22 @@ defmodule MoodBot.IExHelpers do
   end
 
   @doc """
-  Display a mood on the e-ink display.
+  Initialize the e-ink display.
 
   ## Examples
 
-      iex> display_mood(:happy)
+      iex> display_init()
       :ok
   """
-  def display_mood(mood) when mood in [:happy, :sad, :neutral, :angry, :surprised] do
-    result = MoodBot.Display.show_mood(mood)
+  def display_init do
+    result = MoodBot.Display.init_display()
 
     case result do
       :ok ->
-        IO.puts("✓ Displaying mood: #{mood}")
+        IO.puts("✓ Display initialized")
 
       {:error, reason} ->
-        IO.puts("✗ Failed to display mood: #{reason}")
-    end
-
-    result
-  end
-
-  @doc """
-  Clear the e-ink display.
-
-  ## Examples
-
-      iex> display_clear()
-      :ok
-  """
-  def display_clear do
-    result = MoodBot.Display.clear()
-
-    case result do
-      :ok ->
-        IO.puts("✓ Display cleared")
-
-      {:error, reason} ->
-        IO.puts("✗ Failed to clear display: #{inspect(reason)}")
-    end
-
-    result
-  end
-
-  @doc """
-  Fill the e-ink display with black.
-
-  ## Examples
-
-      iex> display_fill_black()
-      :ok
-  """
-  def display_fill_black do
-    result = MoodBot.Display.fill_black()
-
-    case result do
-      :ok ->
-        IO.puts("✓ Display filled with black")
-
-      {:error, reason} ->
-        IO.puts("✗ Failed to fill display with black: #{reason}")
+        IO.puts("✗ Failed to initialize display: #{reason}")
     end
 
     result
@@ -258,25 +214,65 @@ defmodule MoodBot.IExHelpers do
   end
 
   @doc """
-  Initialize the e-ink display.
+  Clear the e-ink display.
 
   ## Examples
 
-      iex> display_init()
+      iex> display_clear()
       :ok
   """
-  def display_init do
-    result = MoodBot.Display.init_display()
+  def display_clear do
+    result = MoodBot.Display.clear()
 
     case result do
       :ok ->
-        IO.puts("✓ Display initialized")
+        IO.puts("✓ Display cleared")
 
       {:error, reason} ->
-        IO.puts("✗ Failed to initialize display: #{reason}")
+        IO.puts("✗ Failed to clear display: #{inspect(reason)}")
     end
 
     result
+  end
+
+  @doc """
+  Display a mood on the e-ink display.
+
+  ## Examples
+
+      iex> display_mood(:happy)
+      :ok
+  """
+  def display_mood(mood) when mood in [:happy, :sad, :neutral, :angry, :surprised] do
+    result = MoodBot.Display.show_mood(mood)
+
+    case result do
+      :ok ->
+        IO.puts("✓ Displaying mood: #{mood}")
+
+      {:error, reason} ->
+        IO.puts("✗ Failed to display mood: #{reason}")
+    end
+
+    result
+  end
+
+  def display_demo do
+    all_white_image = :binary.copy(<<0xFF>>, div(128 * 296, 8))
+    all_black_image = :binary.copy(<<0x00>>, div(128 * 296, 8))
+
+    with :ok <- display_init(),
+         :ok <- display_clear(),
+         :ok <- MoodBot.Display.display_image(all_black_image),
+         :ok <- Process.sleep(2_000),
+         :ok <- MoodBot.Display.display_image(all_white_image),
+         :ok <- Process.sleep(2_000),
+         :ok <- display_clear() do
+      IO.puts("✓ Display demo finished. c ya! 🤗")
+    else
+      {:error, reason} ->
+        IO.puts("✗ Demo sequence failed 😞 Reason: #{reason}")
+    end
   end
 
   @doc """

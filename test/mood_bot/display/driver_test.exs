@@ -93,34 +93,34 @@ defmodule MoodBot.Display.DriverTest do
       assert %Driver{} = new_driver_state
     end
 
-    test "display_frame_full/2 validates image size", %{driver_state: driver_state} do
+    test "render_image/2 validates image size", %{driver_state: driver_state} do
       # Test with invalid size
       invalid_data = <<1, 2, 3>>
-      assert {:error, :invalid_image_size} = Driver.display_frame_full(driver_state, invalid_data)
+      assert {:error, :invalid_image_size} = Driver.render_image(driver_state, invalid_data)
     end
 
-    test "display_frame_full/2 accepts valid image data", %{driver_state: driver_state} do
+    test "render_image/2 accepts valid image data", %{driver_state: driver_state} do
       image_data = DisplayTestHelper.test_image_data()
-      assert {:ok, new_driver_state} = Driver.display_frame_full(driver_state, image_data)
+      assert {:ok, new_driver_state} = Driver.render_image(driver_state, image_data)
       assert %Driver{} = new_driver_state
     end
 
-    test "display_frame_partial/2 validates image size", %{driver_state: driver_state} do
+    test "render_image_partial/2 validates image size", %{driver_state: driver_state} do
       invalid_data = <<1, 2, 3>>
 
       assert {:error, :invalid_image_size} =
-               Driver.display_frame_partial(driver_state, invalid_data)
+               Driver.render_image_partial(driver_state, invalid_data)
     end
 
-    test "display_frame_partial/2 accepts valid image data", %{driver_state: driver_state} do
+    test "render_image_partial/2 accepts valid image data", %{driver_state: driver_state} do
       image_data = DisplayTestHelper.test_image_data()
-      assert {:ok, new_driver_state} = Driver.display_frame_partial(driver_state, image_data)
+      assert {:ok, new_driver_state} = Driver.render_image_partial(driver_state, image_data)
       assert %Driver{} = new_driver_state
     end
 
-    test "clear_display/2 processes display clear successfully", %{driver_state: driver_state} do
+    test "clear/2 processes display clear successfully", %{driver_state: driver_state} do
       data = DisplayTestHelper.test_image_data()
-      assert {:ok, new_driver_state} = Driver.clear_display(driver_state, data)
+      assert {:ok, new_driver_state} = Driver.clear(driver_state, data)
       assert %Driver{} = new_driver_state
     end
 

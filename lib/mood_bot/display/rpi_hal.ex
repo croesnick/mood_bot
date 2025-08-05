@@ -94,9 +94,9 @@ defmodule MoodBot.Display.RpiHAL do
   end
 
   defp spi_write_chunk(state, data) do
-    result = SPI.transfer(state.spi, data)
+    Logger.debug("SPI: Writing chunk of #{byte_size(data)} bytes")
 
-    case result do
+    case SPI.transfer(state.spi, data) do
       {:ok, _response} ->
         {:ok, state}
 
@@ -155,10 +155,10 @@ defmodule MoodBot.Display.RpiHAL do
     end
   end
 
-  # @impl true
+  @impl true
   def gpio_pwr_on(state), do: gpio_set_pwr(state, 1)
 
-  # @impl true
+  @impl true
   def gpio_pwr_off(state), do: gpio_set_pwr(state, 0)
 
   defp gpio_set_pwr(state, value) when value in [0, 1] do
@@ -229,13 +229,13 @@ defmodule MoodBot.Display.RpiHAL do
   @impl true
   def close(state) do
     Logger.debug("Closing RpiHAL resources")
+    SPI.close(state.spi)
 
     GPIO.close(state.dc_gpio)
     GPIO.close(state.rst_gpio)
     GPIO.close(state.busy_gpio)
-    GPIO.close(state.pwr_gpio)
 
-    SPI.close(state.spi)
+    GPIO.close(state.pwr_gpio)
 
     :ok
   end

@@ -99,14 +99,21 @@ config :mdns_lite,
 # Configure the e-ink display
 config :mood_bot, MoodBot.Display,
   spi_device: "spidev0.0",
-  # For reference:
-  # https://www.waveshare.com/wiki/2.9inch_e-Paper_Module_Manual#Working_With_Raspberry_Pi
-  # https://github.com/waveshareteam/e-Paper/blob/04806a447b3d4a1f433d280311e86fa8e5f822cf/RaspberryPi_JetsonNano/python/lib/waveshare_epd/epdconfig.py#L41
-  # Using modern controller/offset tuples for GPIO specification
   dc_gpio: {"gpiochip0", 25},
   rst_gpio: {"gpiochip0", 17},
   busy_gpio: {"gpiochip0", 24},
   pwr_gpio: {"gpiochip0", 18}
 
 config :mood_bot, MoodBot.Display.Driver,
-  hal_module: MoodBot.Display.RpiHAL
+  hal_module: MoodBot.Display.RpiHAL,
+  spi_device: "spidev0.0",
+  # For reference:
+  # https://www.waveshare.com/wiki/2.9inch_e-Paper_Module_Manual#Working_With_Raspberry_Pi
+  # https://github.com/waveshareteam/e-Paper/blob/04806a447b3d4a1f433d280311e86fa8e5f822cf/RaspberryPi_JetsonNano/python/lib/waveshare_epd/epdconfig.py#L41
+  # Using modern controller/offset tuples for GPIO specification
+  gpio: %{
+    dc_gpio: {"gpiochip0", 25},
+    rst_gpio: {"gpiochip0", 17},
+    busy_gpio: {"gpiochip0", 24},
+    pwr_gpio: {"gpiochip0", 18}
+  }

@@ -57,6 +57,9 @@ defmodule MoodBot.Display.HAL do
   @callback spi_write(state :: hal_state(), data :: binary()) ::
               {:ok, hal_state()} | {:error, term()}
 
+  @callback gpio_pwr_on(state :: hal_state()) :: {:ok, hal_state()} | {:error, term()}
+  @callback gpio_pwr_off(state :: hal_state()) :: {:ok, hal_state()} | {:error, term()}
+
   @doc """
   Set the Data/Command (DC) GPIO pin state.
 
