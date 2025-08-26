@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
       "Bash(mix compile)",
@@ -15,13 +16,18 @@
       "Bash(ping:*)",
       "Bash(MIX_TARGET=rpi3 mix firmware)",
       "Bash(MIX_TARGET=rpi3 mix upload)",
-      "Bash(mix format:*)"
+      "Bash(mix format:*)",
+      "Bash(iex:*)",
+      "Bash(mix process_image:*)",
+      "WebFetch(domain:hexdocs.pm)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs"
     ],
     "deny": []
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "hexdocs",
     "ssh-nerves"
-  ],
-  "$schema": "https://json.schemastore.org/claude-code-settings.json"
+  ]
 }

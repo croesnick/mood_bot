@@ -22,6 +22,7 @@ defmodule MoodBot.MixProject do
       deps: deps(),
       releases: [{@app, release()}],
       preferred_cli_target: [run: :host, test: :host],
+      aliases: aliases(),
       dialyzer: [
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
         ignore_warnings: ".dialyzer_ignore.exs"
@@ -46,6 +47,18 @@ defmodule MoodBot.MixProject do
       {:ring_logger, "~> 0.11.0"},
       {:toolshed, "~> 0.4.0"},
       {:typedstruct, "~> 0.5.3"},
+
+      # Image processing (host only - no cross-compilation issues)
+      # {:image, "~> 0.61", targets: [:host]},
+      {:image, "~> 0.62", targets: [:host]},
+      # Nerves support was added just in time :)
+      # We just need to use the master branch of vix and override the version restriction imposed by image.
+      # See https://github.com/akash-akya/vix/issues/130
+      {:vix,
+       git: "https://github.com/akash-akya/vix.git",
+       branch: "master",
+       override: true,
+       targets: [:host]},
 
       # Allow Nerves.Runtime on host to support development, testing and CI.
       # See config/host.exs for usage.
@@ -85,5 +98,33 @@ defmodule MoodBot.MixProject do
       steps: [&Nerves.Release.init/1, :assemble],
       strip_beams: Mix.env() == :prod or [keep: ["Docs"]]
     ]
+  end
+
+  defp aliases do
+    [
+      compile: ["compile", &copy_assets/1]
+    ]
+  end
+
+  # Copy static assets from assets/ to priv/assets/ during compilation
+  # This follows Nerves best practice: "add a line to your Makefile or mix.exs to copy them"
+  # Reference: https://hexdocs.pm/nerves/compiling-non-beam-code.html#library-recommendations
+  defp copy_assets(_args) do
+    source_dir = "assets"
+    target_dir = "priv/assets"
+
+    if File.exists?(source_dir) do
+      # Ensure target directory exists
+      File.mkdir_p!(target_dir)
+
+      # Copy all files from assets/ to priv/assets/
+      case File.cp_r(source_dir, target_dir) do
+        {:ok, _files} ->
+          Mix.shell().info("Copied static assets from #{source_dir} to #{target_dir}")
+
+        {:error, reason, file} ->
+          Mix.shell().error("Failed to copy #{file}: #{reason}")
+      end
+    end
   end
 end

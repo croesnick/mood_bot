@@ -110,7 +110,7 @@ defmodule MoodBot.Display.MockHAL do
   end
 
   defp save_frame_bitmap(state, data) do
-    alias MoodBot.Display.Bitmap
+    alias MoodBot.Images.Bitmap
 
     filename = Bitmap.generate_filename(state.session_id, state.frame_counter)
     Bitmap.save_pbm(data, filename)

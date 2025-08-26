@@ -25,6 +25,11 @@ The application uses a target-conditional architecture where different child pro
 - Always check if the usage documented in the README needs to be adjusted
 - For diagrams, try to use mermaid whenever possible. Ensure the diagrams are simple, to the point, easy to understand, and properly labeled.
 
+## Documentation Guidelines
+
+- Remove redundant information while keeping essential details and helpful examples
+- Make every piece of information relevant to the reader
+
 ## Development Commands
 
 ### Core Development
@@ -125,47 +130,6 @@ Application.started_applications() |> Enum.map(fn {name, _desc, _vsn} -> name en
 5. **Test commands manually first** before SSH MCP automation
 
 This approach enables automated debugging through Claude Code without manual intervention.
-
-### GPIO Pin Debugging
-
-For hardware-related issues, use the built-in GPIO debugging workflow:
-
-**Add to your IEx helpers:**
-
-```elixir
-def gpio_debug do
-  IO.puts("GPIO Backend Info:")
-  backend_info = Circuits.GPIO.backend_info()
-  IO.inspect(backend_info)
-  
-  IO.puts("\nAvailable GPIOs:")
-  available_gpios = Circuits.GPIO.enumerate()
-  available_gpios |> Enum.take(10) |> Enum.each(&IO.inspect/1)
-  
-  IO.puts("\nDisplay pins status (DC:22, RST:11, BUSY:18, CS:24):")
-  [11, 18, 22, 24] |> Enum.each(fn pin ->
-    status = 
-      case Circuits.GPIO.status(pin) do
-        {:ok, info} -> info
-        {:error, reason} -> "Error: #{inspect(reason)}"
-      end
-    IO.puts("  GPIO #{pin}: #{inspect(status)}")
-  end)
-end
-```
-
-**Test via SSH MCP:**
-
-```bash
-MoodBot.IExHelpers.gpio_debug()
-```
-
-**Key Debugging Insights:**
-
-- "GPIO busy" errors are often misleading - pins may be properly claimed by `circuits_gpio`
-- Check if pins show `consumer: "circuits_gpio"` - this indicates successful claiming
-- Real hardware errors typically occur in the HAL layer, not GPIO availability
-- Focus on actual error messages (case clause errors, undefined function calls) rather than "busy" messages
 
 ## Architecture & Design Principles
 

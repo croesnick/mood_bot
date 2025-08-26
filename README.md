@@ -281,12 +281,18 @@ The session ID changes each time you restart the application, and the frame coun
 # Display raw image data (binary, 1 bit per pixel)
 :ok = MoodBot.Display.display_image(image_binary)
 
+# Load and process external images (PNG, BMP, TIFF, WebP, PBM)
+{:ok, display_data} = MoodBot.Images.Bitmap.load_for_display("image.png")
+:ok = MoodBot.Display.display_image(display_data)
+
 # Sleep mode
 :ok = MoodBot.Display.sleep()
 
 # Get status
 %{initialized: boolean(), display_state: atom(), ...} = MoodBot.Display.status()
 ```
+
+For image processing and conversion utilities, see [`scripts/README.md`](scripts/README.md).
 
 ### Image Format
 

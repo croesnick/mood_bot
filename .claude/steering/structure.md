@@ -70,7 +70,7 @@ test/
 - **GenServers**: Use descriptive names like `MoodBot.Display`, `MoodBot.NetworkMonitor`
 - **Protocols/Behaviors**: Interfaces like `MoodBot.Display.HAL`
 - **Implementations**: Descriptive suffixes like `MockHAL`, `RpiHAL`
-- **Utilities**: Clear purpose like `MoodBot.Display.Bitmap`
+- **Utilities**: Clear purpose like `MoodBot.Images.Bitmap`
 
 ### File Names
 - **Snake case**: All file names in `snake_case.ex`

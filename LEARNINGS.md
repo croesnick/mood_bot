@@ -420,7 +420,7 @@ Which approach would you prefer? I can show you the specific code changes once y
 ⏺ Great question! Let me research this by looking at the e-ink display communication requirements and SPI timing.
 
 ⏺ hexdocs - fetch (MCP)(packageName: "circuits_spi")
-  ⎿  Latest version of circuits_spi is 2.0.4                           
+  ⎿  Latest version of circuits_spi is 2.0.4
      ✓ Embeddings for circuits_spi 2.0.4 already exist, skipping fetch.
        Use --force to re-fetch and update embeddings.
 
@@ -432,3 +432,98 @@ Which approach would you prefer? I can show you the specific code changes once y
 ⏺ Perfect! This confirms that you don't need manual CS control. According to Circuits.SPI docs:
 
   "All transactions will automatically set CS0. When using "spidev1.0" refers to SPI bus 1 and CS0. All transactions will automatically set CS0."
+
+## image/vix cross-compilation does not just "work"
+
+### Problem 1
+
+Problem is: for vix, mix firmware tries to download precompiled binaries for macOS, while the target of is actually an RPi3
+
+== Compilation error in file lib/vix/vips/flag.ex ==
+** (UndefinedFunctionError) function Vix.Nif.nif_vips_flag_list/0 is undefined (module Vix.Nif is not available)
+    Vix.Nif.nif_vips_flag_list()
+    lib/vix/vips/flag.ex:5: Vix.Vips.FlagHelper.**before_compile**/1
+    (stdlib 6.2.2.1) lists.erl:2146: :lists.foldl/3
+    (stdlib 6.2.2.1) lists.erl:2151: :lists.foldl_1/3
+
+11:03:32.068 [warning] The on_load function for module Elixir.Vix.Nif returned:
+{:error,
+ {:load_failed,
+  ~c"Failed to load NIF library: 'dlopen(/Users/crntng/private/mood_bot/_build/rpi3_dev/lib/vix/priv/vix.so, 0x0002): tried: '/Users/crntng/private/mood_bot/_build/rpi3_dev/lib/vix/priv/vix.so' (slice is not valid mach-o file), '/System/Volumes/Preboot/Cryptexes/OS/Users/crntng/private/mood_bot/_build/rpi3_dev/lib/vix/priv/vix.so' (no such file), '/Users/crntng/private/mood_bot/_build/rpi3_dev/lib/vix/priv/vix.so' (slice is not valid mach-o file)'"}}
+
+could not compile dependency :vix, "mix compile" failed. Errors may have been logged above. You can recompile this dependency with "mix deps.compile vix --force", update it with "mix deps.update vix" or clean it with "mix deps.clean vix"
+
+---
+
+Web Search("Vix Elixir NIF cross-compilation Nerves ARM RPi issue mach-o file slice not valid")
+
+---
+
+<https://github.com/akash-akya/vix/issues/130>
+
+### Problem 2
+
+After update to
+
+```
+{:image, "~> 0.62"},
+# Nerves support was added just in time :)
+# We just need to use the master branch of vix and override the version restriction imposed by image.
+# See https://github.com/akash-akya/vix/issues/130
+{:vix, git: "https://github.com/akash-akya/vix.git", branch: "master", override: true},
+```
+
+I get yet another error:
+
+```shell
+❯ MIX_TARGET=rpi3 mix firmware
+==> nerves
+==> mood_bot
+
+Nerves environment
+  MIX_TARGET:   rpi3
+  MIX_ENV:      dev
+
+==> vix
+Error happened while installing vix from precompiled binary: "missing checksum.exs file".
+
+Attempting to compile vix from source...
+Setting up precompiled libvips...
+
+13:03:25.267 [debug] Fetching https://github.com/akash-akya/sharp-libvips/releases/download/v1.2.0/sharp-libvips-darwin-arm64v8.tar.gz
+
+13:03:26.978 [debug] Extracting to /Users/crntng/private/mood_bot/_build/rpi3_dev/lib/vix/priv/sharp-libvips-darwin-arm64v8.tar.gz
+ CC     pipe.c
+ CC     utils.c
+ CC     vips_boxed.c
+ CC     vips_foreign.c
+ CC     vips_image.c
+ CC     vips_interpolate.c
+ CC     vips_operation.c
+ CC     vix.c
+ CC     g_boxed.c
+ CC     g_object.c
+ CC     g_param_spec.c
+ CC     g_type.c
+ CC     g_value.c
+ LD     vix.so
+armv7-nerves-linux-gnueabihf-gcc: error: unrecognized command-line option '-flat_namespace'
+make[1]: *** [/Users/crntng/private/mood_bot/_build/rpi3_dev/lib/vix/priv/vix.so] Error 1
+make: *** [compile] Error 2
+could not compile dependency :vix, "mix compile" failed. Errors may have been logged above. You can recompile this dependency with "mix deps.compile vix --force", update it with "mix deps.update vix" or clean it with "mix deps.clean vix"
+==> mood_bot
+** (Mix) Could not compile with "make" (exit status: 2).
+You need to have gcc and make installed. Try running the
+commands "gcc --version" and / or "make --version". If these programs
+are not installed, you will be prompted to install them.
+```
+
+## Playing audio via Nerves
+
+- Starter talk: <https://www.youtube.com/watch?v=2IastDZCuFs>
+- Membrane: <https://underjord.io/membrane-media-processing-and-liveview.html>
+- Elixir for multimedia: <https://blog.swmansion.com/elixir-for-multimedia-a-practical-guide-for-developers-169adb0eb523>
+
+## Random bits and pieces
+
+- <https://wiki.alopex.li/NervesNotes#onboard-storage>

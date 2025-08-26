@@ -16,17 +16,8 @@ defmodule MoodBot.IExHelpers do
       iex> system_info()
   """
 
-  @doc """
-  Scan for available WiFi networks.
-
-  ## Examples
-
-      iex> wifi_scan()
-      [
-        %{ssid: "MyNetwork", frequency: 2437, signal_percent: 67},
-        %{ssid: "NeighborNetwork", frequency: 2462, signal_percent: 45}
-      ]
-  """
+  @doc "Scan for available WiFi networks (shows top 10)."
+  @spec wifi_scan() :: list(map())
   def wifi_scan do
     networks = MoodBot.WiFiConfig.scan()
 
@@ -47,14 +38,8 @@ defmodule MoodBot.IExHelpers do
     networks
   end
 
-  @doc """
-  Connect to a WiFi network.
-
-  ## Examples
-
-      iex> wifi_connect("MyNetwork", "MyPassword")
-      {:ok, "WiFi configured for MyNetwork"}
-  """
+  @doc "Connect to a WiFi network (persistent)."
+  @spec wifi_connect(binary(), binary()) :: {:ok, binary()} | {:error, binary()}
   def wifi_connect(ssid, password) do
     result = MoodBot.WiFiConfig.configure_wifi(ssid, password)
 
@@ -70,22 +55,8 @@ defmodule MoodBot.IExHelpers do
     result
   end
 
-  @doc """
-  Connect to a WPA2 Enterprise WiFi network.
-
-  ## Examples
-
-      iex> wifi_connect_enterprise("CorpNetwork", "username", "password")
-      {:ok, "WiFi configured for CorpNetwork"}
-  """
-  @doc """
-  Connect to a WiFi network temporarily (won't persist after reboot).
-
-  ## Examples
-
-      iex> wifi_connect_temp("GuestNetwork", "TempPassword")
-      {:ok, "WiFi configured for GuestNetwork"}
-  """
+  @doc "Connect to a WiFi network temporarily (won't persist after reboot)."
+  @spec wifi_connect_temp(binary(), binary()) :: {:ok, binary()} | {:error, binary()}
   def wifi_connect_temp(ssid, password) do
     result = MoodBot.WiFiConfig.configure_wifi_temporary(ssid, password)
 
@@ -101,20 +72,8 @@ defmodule MoodBot.IExHelpers do
     result
   end
 
-  @doc """
-  Get current WiFi status.
-
-  ## Examples
-
-      iex> wifi_status()
-      %{
-        interface: "wlan0",
-        state: :configured,
-        connection: :internet,
-        ssid: "MyNetwork",
-        signal_percent: 67
-      }
-  """
+  @doc "Get current WiFi status with visual indicators."
+  @spec wifi_status() :: map()
   def wifi_status do
     status = MoodBot.WiFiConfig.status()
 
@@ -144,14 +103,8 @@ defmodule MoodBot.IExHelpers do
     status
   end
 
-  @doc """
-  Disconnect from WiFi.
-
-  ## Examples
-
-      iex> wifi_disconnect()
-      {:ok, "WiFi disabled"}
-  """
+  @doc "Disconnect from WiFi."
+  @spec wifi_disconnect() :: {:ok, binary()} | {:error, binary()}
   def wifi_disconnect do
     result = MoodBot.WiFiConfig.disable_wifi()
 
@@ -166,14 +119,8 @@ defmodule MoodBot.IExHelpers do
     result
   end
 
-  @doc """
-  Initialize the e-ink display.
-
-  ## Examples
-
-      iex> display_init()
-      :ok
-  """
+  @doc "Initialize the e-ink display."
+  @spec display_init() :: :ok | {:error, binary()}
   def display_init do
     result = MoodBot.Display.init_display()
 
@@ -188,14 +135,8 @@ defmodule MoodBot.IExHelpers do
     result
   end
 
-  @doc """
-  Get display status.
-
-  ## Examples
-
-      iex> display_status()
-      %{initialized: true, display_state: :ready, ...}
-  """
+  @doc "Get display status with visual indicators."
+  @spec display_status() :: map()
   def display_status do
     status = MoodBot.Display.status()
 
@@ -213,14 +154,8 @@ defmodule MoodBot.IExHelpers do
     status
   end
 
-  @doc """
-  Clear the e-ink display.
-
-  ## Examples
-
-      iex> display_clear()
-      :ok
-  """
+  @doc "Clear the e-ink display to white."
+  @spec display_clear() :: :ok | {:error, any()}
   def display_clear do
     result = MoodBot.Display.clear()
 
@@ -235,14 +170,8 @@ defmodule MoodBot.IExHelpers do
     result
   end
 
-  @doc """
-  Display a mood on the e-ink display.
-
-  ## Examples
-
-      iex> display_mood(:happy)
-      :ok
-  """
+  @doc "Display a mood on the e-ink display (:happy, :sad, :neutral, :angry, :surprised)."
+  @spec display_mood(atom()) :: :ok | {:error, binary()}
   def display_mood(mood) when mood in [:happy, :sad, :neutral, :angry, :surprised] do
     result = MoodBot.Display.show_mood(mood)
 
@@ -257,35 +186,82 @@ defmodule MoodBot.IExHelpers do
     result
   end
 
+  @doc "Run comprehensive display demo (black → white → elixir logo → bitmap samples → clear)."
+  @spec display_demo() :: :ok | {:error, binary()}
   def display_demo do
     all_white_image = :binary.copy(<<0xFF>>, div(128 * 296, 8))
     all_black_image = :binary.copy(<<0x00>>, div(128 * 296, 8))
 
+    # Find some sample PBM files to use
+    sample_images = [
+      Path.join(:code.priv_dir(:mood_bot), "assets/demo/alternating_stripes.pbm")
+    ]
+
+    IO.puts("🖼️  Starting comprehensive display demo...")
+
     with :ok <- display_init(),
          :ok <- display_clear(),
-         :ok <- MoodBot.Display.display_image(all_black_image),
+         # Show programmatic images first
+         :ok <- demo_step("all black", MoodBot.Display.display_image(all_black_image)),
          :ok <- Process.sleep(2_000),
-         :ok <- MoodBot.Display.display_image(all_white_image),
+         :ok <- demo_step("all white", MoodBot.Display.display_image(all_white_image)),
          :ok <- Process.sleep(2_000),
+         # Show Elixir logo (PNG processing)
+         #  :ok <- demo_elixir_logo(),
+         #  :ok <- Process.sleep(5_000),
+         # Show actual bitmap files
+         :ok <- demo_loaded_images(sample_images),
+         :ok <- demo_step("all white", MoodBot.Display.display_image(all_white_image)),
          :ok <- display_clear() do
-      IO.puts("✓ Display demo finished. c ya! 🤗")
+      IO.puts("✓ Comprehensive display demo finished with PNG and bitmap files! 🎉")
     else
       {:error, reason} ->
         IO.puts("✗ Demo sequence failed 😞 Reason: #{reason}")
     end
   end
 
-  @doc """
-  Show network status for all interfaces.
+  @spec demo_step(binary(), any()) :: any()
+  defp demo_step(description, operation) do
+    IO.puts("  📺 Displaying: #{description}")
+    operation
+  end
 
-  ## Examples
+  @spec demo_elixir_logo() :: :ok | {:error, binary()}
+  defp demo_elixir_logo do
+    logo_path = "priv/assets/logos/elixir.png"
 
-      iex> network_status()
-      %{
-        eth0: %{state: :configured, connection: :internet, ip: "192.168.1.100"},
-        wlan0: %{state: :configured, connection: :internet, ip: "192.168.1.101", signal: 75}
-      }
-  """
+    case MoodBot.Images.ImageProcessor.process_for_display(logo_path) do
+      {:ok, logo_data} ->
+        demo_step("Elixir logo from #{logo_path}", MoodBot.Display.display_image(logo_data))
+
+      {:error, reason} ->
+        IO.puts("  ⚠️  Failed to load Elixir logo: #{reason}")
+        IO.puts("  📝 Continuing demo without logo...")
+        :ok
+    end
+  end
+
+  @spec demo_loaded_images(list(binary())) :: :ok
+  defp demo_loaded_images([]), do: :ok
+
+  defp demo_loaded_images([image_path | rest]) do
+    case MoodBot.Images.Bitmap.load_pbm(image_path) do
+      {:ok, image_data} ->
+        filename = Path.basename(image_path)
+
+        with :ok <- demo_step("PBM file: #{filename}", MoodBot.Display.display_image(image_data)),
+             :ok <- Process.sleep(3_000) do
+          demo_loaded_images(rest)
+        end
+
+      {:error, reason} ->
+        IO.puts("  ⚠️  Skipping #{image_path}: #{reason}")
+        demo_loaded_images(rest)
+    end
+  end
+
+  @doc "Show network status for all interfaces with visual indicators."
+  @spec network_status() :: map()
   def network_status do
     status = MoodBot.NetworkMonitor.get_status()
 
@@ -313,19 +289,8 @@ defmodule MoodBot.IExHelpers do
     status
   end
 
-  @doc """
-  Show system information.
-
-  ## Examples
-
-      iex> system_info()
-      %{
-        hostname: "nerves-1234",
-        uptime: "2 days, 3 hours",
-        memory: %{...},
-        ...
-      }
-  """
+  @doc "Show system information (hostname, target, interfaces, memory)."
+  @spec system_info() :: map()
   def system_info do
     hostname = :inet.gethostname() |> elem(1) |> to_string()
 
@@ -361,6 +326,7 @@ defmodule MoodBot.IExHelpers do
   end
 
   # Runtime-safe target detection
+  @spec runtime_target() :: :host | :target
   defp runtime_target do
     case Code.ensure_loaded(VintageNet) do
       {:module, VintageNet} -> :target
@@ -368,13 +334,8 @@ defmodule MoodBot.IExHelpers do
     end
   end
 
-  @doc """
-  Debug GPIO pins and show their status.
-
-  ## Examples
-
-      iex> gpio_debug()
-  """
+  @doc "Debug GPIO pins and show their status (display pins: DC:22, RST:11, BUSY:18, CS:24)."
+  @spec gpio_debug() :: map()
   def gpio_debug do
     IO.puts("GPIO Backend Info:")
     backend_info = Circuits.GPIO.backend_info()
@@ -404,13 +365,8 @@ defmodule MoodBot.IExHelpers do
     }
   end
 
-  @doc """
-  Show help for MoodBot commands.
-
-  ## Examples
-
-      iex> help()
-  """
+  @doc "Show help for MoodBot IEx commands."
+  @spec help() :: :ok
   def help do
     IO.puts("""
     MoodBot Helper Commands:
@@ -427,6 +383,7 @@ defmodule MoodBot.IExHelpers do
 
     📺 Display Commands:
       display_init()                       - Initialize the display
+      display_demo()                       - Comprehensive demo (black → white → elixir logo → bitmap samples → clear)
       display_mood(:happy)                 - Show mood (:happy, :sad, :neutral, :angry, :surprised)
       display_clear()                      - Clear the display to white
       display_fill_black()                 - Fill the display with black
@@ -444,6 +401,7 @@ defmodule MoodBot.IExHelpers do
 
   # Private helper functions
 
+  @spec connection_icon(atom()) :: binary()
   defp connection_icon(connection) do
     case connection do
       :internet -> "🌐"
@@ -454,6 +412,7 @@ defmodule MoodBot.IExHelpers do
     end
   end
 
+  @spec signal_to_bars(integer() | any()) :: binary()
   defp signal_to_bars(signal_percent) when is_integer(signal_percent) do
     cond do
       signal_percent >= 75 -> "▰▰▰▰"
@@ -466,6 +425,7 @@ defmodule MoodBot.IExHelpers do
 
   defp signal_to_bars(_), do: "▱▱▱▱"
 
+  @spec format_bytes(non_neg_integer()) :: binary()
   defp format_bytes(bytes) do
     cond do
       bytes >= 1_073_741_824 -> "#{Float.round(bytes / 1_073_741_824, 1)} GB"
