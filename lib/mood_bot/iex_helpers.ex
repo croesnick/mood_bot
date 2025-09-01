@@ -186,6 +186,22 @@ defmodule MoodBot.IExHelpers do
     result
   end
 
+  @doc "Speak text using Azure TTS and play through audio output."
+  @spec speak(String.t()) :: :ok | {:error, String.t()}
+  def speak(text) do
+    result = MoodBot.TTS.Runner.speak(text)
+
+    case result do
+      :ok ->
+        IO.puts("✓ Speech completed")
+
+      {:error, reason} ->
+        IO.puts("✗ Failed to speak: #{reason}")
+    end
+
+    result
+  end
+
   @doc "Run comprehensive display demo (black → white → elixir logo → bitmap samples → clear)."
   @spec display_demo() :: :ok | {:error, binary()}
   def display_demo do
@@ -389,6 +405,9 @@ defmodule MoodBot.IExHelpers do
       display_clear()                      - Clear the display to white
       display_fill_black()                 - Fill the display with black
       display_status()                     - Show display status
+
+    🔊 TTS Commands:
+      speak("Hello world")                 - Speak text using Azure TTS
 
     🔧 System Commands:
       system_info()                        - Show system information

@@ -47,6 +47,7 @@ defmodule MoodBot.MixProject do
       {:ring_logger, "~> 0.11.0"},
       {:toolshed, "~> 0.4.0"},
       {:typedstruct, "~> 0.5.3"},
+      {:req, "~> 0.5.15"},
 
       # Image processing (host only - no cross-compilation issues)
       # {:image, "~> 0.61", targets: [:host]},

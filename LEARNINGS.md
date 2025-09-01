@@ -532,3 +532,36 @@ are not installed, you will be prompted to install them.
 
 Claude insisted on using `Image.compose/3`, while `Image.embed/4` would have been the right choice.
 
+## Playing Audio
+
+Nerves for RPi3 comes with ALSA audio support. And a short test confirmed that it's working:
+
+```shell
+iex(1)> {output, _} = System.cmd("amixer", ["scontrols"])
+{"Simple mixer control 'PCM',0\n", 0}
+
+iex(2)> System.cmd("amixer", ["set", "PCM", "100%"])
+{"Simple mixer control 'PCM',0\n  Capabilities: pvolume pvolume-joined pswitch pswitch-joined\n  Playback channels: Mono\n  Limits: Playback -10239 - 400\n  Mono: Playback 400 [100%] [4.00dB] [on]\n",
+
+iex(3)> System.cmd("aplay", [Path.join(:code.priv_dir(:mood_bot), "assets/audio/Flute.wav")])
+{"", 0}
+```
+
+## TTS
+
+```shell
+export AZURE_SPEECH_KEY="<key>"
+export AZURE_SPEECH_REGION="westeurope"
+
+# REST API docu: https://learn.microsoft.com/en-us/azure/ai-services/speech-service/get-started-text-to-speech?tabs=macos&pivots=programming-language-rest
+# Available audio formats: https://learn.microsoft.com/en-us/dotnet/api/microsoft.cognitiveservices.speech.speechsynthesisoutputformat?view=azure-dotnet
+# Voices: https://speech.microsoft.com/portal/voicegallery
+curl -X POST "https://${AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1" \
+  -H "Ocp-Apim-Subscription-Key: $AZURE_SPEECH_KEY" \
+  -H "Content-Type: application/ssml+xml" \
+  -H "X-Microsoft-OutputFormat: riff-24khz-16bit-mono-pcm" \
+  --data-raw '<speak version="1.0" xml:lang="de-DE">
+    <voice xml:lang="de-DE" xml:gender="Male" name="de-DE-Florian:DragonHDLatestNeural">Hallo Freund! Schön, dich kennen zu lernen!</voice>
+  </speak>' \
+  --output test.wav
+```
