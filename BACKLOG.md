@@ -8,13 +8,20 @@ This is my project backlog.
 
 The backlog is ordered descending by priority, so highest priority comes first.
 
-## Task: Architecture display, driver, hal
+## Task: Moods / Robot Faces
 
-What's the intended responsibilities of these three modules?
-Currently, the displa initialized the hal.
-Does this mean that driver and hal are co-located?
-Or both the driver and display depend directly on the hal?
-Because I thought, the dependency chain would be: display -> driver -> hal.
+All hand-drawn robot faces shall be in the firmware.
+They shall be selectable in the interactive shell via `display_mood`.
+
+## Epic: On-Device Audio
+
+MoodBot shall be able to play audio files.
+This is the basis for TTS later.
+
+## Epic: Remember Facts
+
+MoodBot shall be able to remember facts.
+Like one's name, today's mood
 
 ## Epic: Robot Face Scan & Bitmap Conversion
 

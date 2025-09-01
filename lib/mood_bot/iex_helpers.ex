@@ -194,7 +194,8 @@ defmodule MoodBot.IExHelpers do
 
     # Find some sample PBM files to use
     sample_images = [
-      Path.join(:code.priv_dir(:mood_bot), "assets/demo/alternating_stripes.pbm")
+      Path.join(:code.priv_dir(:mood_bot), "assets/demo/peace.pbm"),
+      Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-happy.pbm")
     ]
 
     IO.puts("🖼️  Starting comprehensive display demo...")

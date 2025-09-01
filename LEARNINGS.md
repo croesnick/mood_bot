@@ -527,3 +527,8 @@ are not installed, you will be prompted to install them.
 ## Random bits and pieces
 
 - <https://wiki.alopex.li/NervesNotes#onboard-storage>
+
+## Knowing the API helps a lot
+
+Claude insisted on using `Image.compose/3`, while `Image.embed/4` would have been the right choice.
+

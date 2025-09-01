@@ -292,7 +292,25 @@ The session ID changes each time you restart the application, and the frame coun
 %{initialized: boolean(), display_state: atom(), ...} = MoodBot.Display.status()
 ```
 
-For image processing and conversion utilities, see [`scripts/README.md`](scripts/README.md).
+### Image Processing
+
+Process images for e-ink display with conversion mode options:
+
+```bash
+# CLI script with mode options
+./scripts/process_image.exs input.png output.png --mode bw        # Binary (default)
+./scripts/process_image.exs input.png output.png --mode grayscale # Grayscale
+
+# Mix task with mode support  
+mix process_image input.png output.png --mode bw        # Binary for e-ink
+mix process_image input.png output.pbm --mode grayscale # Grayscale for preview
+```
+
+**Modes:**
+- **`bw` (default)**: True black/white conversion optimized for e-ink displays
+- **`grayscale`**: Grayscale conversion useful for preview/inspection
+
+For detailed image processing documentation, see [`scripts/README.md`](scripts/README.md).
 
 ### Image Format
 
@@ -908,3 +926,4 @@ MIT License
 
 [eink-frame]: https://www.printables.com/model/401112-frame-for-29-e-paper-waveshare-display-module/files
 [eink-rpi-case]: https://www.printables.com/model/159370-waveshare-29-inch-case-for-esphomehomeassistant-di
+[scenic]: https://hexdocs.pm/scenic/overview_general.html
