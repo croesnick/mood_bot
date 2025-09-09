@@ -1,0 +1,9 @@
+{
+    "recommendations": [
+        "jakebecker.elixir-ls",
+        "pantajoe.vscode-elixir-credo",
+        "anthropic.claude-code",
+        "usernamehw.errorlens",
+        "donjayamanne.githistory"
+    ]
+}
