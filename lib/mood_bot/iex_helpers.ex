@@ -16,6 +16,193 @@ defmodule MoodBot.IExHelpers do
       iex> system_info()
   """
 
+  @doc "Initialize the e-ink display."
+  @spec display_init() :: :ok | {:error, binary()}
+  def display_init do
+    result = MoodBot.Display.init_display()
+
+    case result do
+      :ok ->
+        IO.puts("✓ Display initialized")
+
+      {:error, reason} ->
+        IO.puts("✗ Failed to initialize display: #{reason}")
+    end
+
+    result
+  end
+
+  @doc "Get display status with visual indicators."
+  @spec display_status() :: map()
+  def display_status do
+    status = MoodBot.Display.status()
+
+    state_icon =
+      case status.display_state do
+        :ready -> "✓"
+        :initialized -> "✓"
+        :error -> "✗"
+        _ -> "⚠️"
+      end
+
+    IO.puts("Display Status: #{state_icon} #{status.display_state}")
+    IO.puts("  Initialized: #{status.initialized}")
+
+    status
+  end
+
+  @doc "Clear the e-ink display to white."
+  @spec display_clear() :: :ok | {:error, any()}
+  def display_clear do
+    result = MoodBot.Display.clear()
+
+    case result do
+      :ok ->
+        IO.puts("✓ Display cleared")
+
+      {:error, reason} ->
+        IO.puts("✗ Failed to clear display: #{inspect(reason)}")
+    end
+
+    result
+  end
+
+  @doc "Display a mood on the e-ink display (:happy, :sad, :neutral, :angry, :surprised)."
+  @spec display_mood(atom()) :: :ok | {:error, binary()}
+  def display_mood(mood) when mood in [:happy, :sad, :neutral, :angry, :surprised] do
+    result = MoodBot.Display.show_mood(mood)
+
+    case result do
+      :ok ->
+        IO.puts("✓ Displaying mood: #{mood}")
+
+      {:error, reason} ->
+        IO.puts("✗ Failed to display mood: #{reason}")
+    end
+
+    result
+  end
+
+  @doc "Run comprehensive display demo (black → white → elixir logo → bitmap samples → clear)."
+  @spec display_demo() :: :ok | {:error, binary()}
+  def display_demo do
+    all_white_image = :binary.copy(<<0xFF>>, div(128 * 296, 8))
+    all_black_image = :binary.copy(<<0x00>>, div(128 * 296, 8))
+
+    # Find some sample PBM files to use
+    sample_images = [
+      Path.join(:code.priv_dir(:mood_bot), "assets/demo/peace.pbm"),
+      Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-happy.pbm")
+    ]
+
+    IO.puts("🖼️  Starting comprehensive display demo...")
+
+    with :ok <- display_init(),
+         :ok <- display_clear(),
+         # Show programmatic images first
+         :ok <- demo_step("all black", MoodBot.Display.display_image(all_black_image)),
+         :ok <- Process.sleep(2_000),
+         :ok <- demo_step("all white", MoodBot.Display.display_image(all_white_image)),
+         :ok <- Process.sleep(2_000),
+         # Show Elixir logo (PNG processing)
+         #  :ok <- demo_elixir_logo(),
+         #  :ok <- Process.sleep(5_000),
+         # Show actual bitmap files
+         :ok <- demo_loaded_images(sample_images),
+         :ok <- demo_step("all white", MoodBot.Display.display_image(all_white_image)),
+         :ok <- display_clear() do
+      IO.puts("✓ Comprehensive display demo finished with PNG and bitmap files! 🎉")
+    else
+      {:error, reason} ->
+        IO.puts("✗ Demo sequence failed 😞 Reason: #{reason}")
+    end
+  end
+
+  @spec demo_step(binary(), any()) :: any()
+  defp demo_step(description, operation) do
+    IO.puts("  📺 Displaying: #{description}")
+    operation
+  end
+
+  @spec demo_elixir_logo() :: :ok | {:error, binary()}
+  defp demo_elixir_logo do
+    logo_path = "priv/assets/logos/elixir.png"
+
+    case MoodBot.Images.ImageProcessor.process_for_display(logo_path) do
+      {:ok, logo_data} ->
+        demo_step("Elixir logo from #{logo_path}", MoodBot.Display.display_image(logo_data))
+
+      {:error, reason} ->
+        IO.puts("  ⚠️  Failed to load Elixir logo: #{reason}")
+        IO.puts("  📝 Continuing demo without logo...")
+        :ok
+    end
+  end
+
+  @spec demo_loaded_images(list(binary())) :: :ok
+  defp demo_loaded_images([]), do: :ok
+
+  defp demo_loaded_images([image_path | rest]) do
+    case MoodBot.Images.Bitmap.load_pbm(image_path) do
+      {:ok, image_data} ->
+        filename = Path.basename(image_path)
+
+        with :ok <- demo_step("PBM file: #{filename}", MoodBot.Display.display_image(image_data)),
+             :ok <- Process.sleep(3_000) do
+          demo_loaded_images(rest)
+        end
+
+      {:error, reason} ->
+        IO.puts("  ⚠️  Skipping #{image_path}: #{reason}")
+        demo_loaded_images(rest)
+    end
+  end
+
+  @doc "Speak text using Azure TTS and play through audio output."
+  @spec speak(String.t()) :: :ok | {:error, String.t()}
+  def speak(text) do
+    result = MoodBot.TTS.Runner.speak(text)
+
+    case result do
+      :ok ->
+        IO.puts("✓ Speech completed")
+
+      {:error, reason} ->
+        IO.puts("✗ Failed to speak: #{reason}")
+    end
+
+    result
+  end
+
+  @doc "Show network status for all interfaces with visual indicators."
+  @spec network_status() :: map()
+  def network_status do
+    status = MoodBot.NetworkMonitor.get_status()
+
+    IO.puts("Network Status:")
+
+    Enum.each(status, fn {interface, info} ->
+      connection_icon = connection_icon(info.connection)
+
+      signal_info =
+        if Map.has_key?(info, :signal) and info.signal,
+          do: " #{signal_to_bars(info.signal)}",
+          else: ""
+
+      IO.puts("  #{interface}: #{connection_icon} #{info.state} #{signal_info}")
+      if info.ip, do: IO.puts("    IP: #{info.ip}")
+      if Map.get(info, :ssid), do: IO.puts("    SSID: #{info.ssid}")
+    end)
+
+    primary = MoodBot.NetworkMonitor.get_primary_interface()
+    internet = MoodBot.NetworkMonitor.has_internet?()
+
+    IO.puts("\nPrimary Interface: #{primary || "none"}")
+    IO.puts("Internet Access: #{if internet, do: "✓ Yes", else: "✗ No"}")
+
+    status
+  end
+
   @doc "Scan for available WiFi networks (shows top 10)."
   @spec wifi_scan() :: list(map())
   def wifi_scan do
@@ -117,193 +304,6 @@ defmodule MoodBot.IExHelpers do
     end
 
     result
-  end
-
-  @doc "Initialize the e-ink display."
-  @spec display_init() :: :ok | {:error, binary()}
-  def display_init do
-    result = MoodBot.Display.init_display()
-
-    case result do
-      :ok ->
-        IO.puts("✓ Display initialized")
-
-      {:error, reason} ->
-        IO.puts("✗ Failed to initialize display: #{reason}")
-    end
-
-    result
-  end
-
-  @doc "Get display status with visual indicators."
-  @spec display_status() :: map()
-  def display_status do
-    status = MoodBot.Display.status()
-
-    state_icon =
-      case status.display_state do
-        :ready -> "✓"
-        :initialized -> "✓"
-        :error -> "✗"
-        _ -> "⚠️"
-      end
-
-    IO.puts("Display Status: #{state_icon} #{status.display_state}")
-    IO.puts("  Initialized: #{status.initialized}")
-
-    status
-  end
-
-  @doc "Clear the e-ink display to white."
-  @spec display_clear() :: :ok | {:error, any()}
-  def display_clear do
-    result = MoodBot.Display.clear()
-
-    case result do
-      :ok ->
-        IO.puts("✓ Display cleared")
-
-      {:error, reason} ->
-        IO.puts("✗ Failed to clear display: #{inspect(reason)}")
-    end
-
-    result
-  end
-
-  @doc "Display a mood on the e-ink display (:happy, :sad, :neutral, :angry, :surprised)."
-  @spec display_mood(atom()) :: :ok | {:error, binary()}
-  def display_mood(mood) when mood in [:happy, :sad, :neutral, :angry, :surprised] do
-    result = MoodBot.Display.show_mood(mood)
-
-    case result do
-      :ok ->
-        IO.puts("✓ Displaying mood: #{mood}")
-
-      {:error, reason} ->
-        IO.puts("✗ Failed to display mood: #{reason}")
-    end
-
-    result
-  end
-
-  @doc "Speak text using Azure TTS and play through audio output."
-  @spec speak(String.t()) :: :ok | {:error, String.t()}
-  def speak(text) do
-    result = MoodBot.TTS.Runner.speak(text)
-
-    case result do
-      :ok ->
-        IO.puts("✓ Speech completed")
-
-      {:error, reason} ->
-        IO.puts("✗ Failed to speak: #{reason}")
-    end
-
-    result
-  end
-
-  @doc "Run comprehensive display demo (black → white → elixir logo → bitmap samples → clear)."
-  @spec display_demo() :: :ok | {:error, binary()}
-  def display_demo do
-    all_white_image = :binary.copy(<<0xFF>>, div(128 * 296, 8))
-    all_black_image = :binary.copy(<<0x00>>, div(128 * 296, 8))
-
-    # Find some sample PBM files to use
-    sample_images = [
-      Path.join(:code.priv_dir(:mood_bot), "assets/demo/peace.pbm"),
-      Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-happy.pbm")
-    ]
-
-    IO.puts("🖼️  Starting comprehensive display demo...")
-
-    with :ok <- display_init(),
-         :ok <- display_clear(),
-         # Show programmatic images first
-         :ok <- demo_step("all black", MoodBot.Display.display_image(all_black_image)),
-         :ok <- Process.sleep(2_000),
-         :ok <- demo_step("all white", MoodBot.Display.display_image(all_white_image)),
-         :ok <- Process.sleep(2_000),
-         # Show Elixir logo (PNG processing)
-         #  :ok <- demo_elixir_logo(),
-         #  :ok <- Process.sleep(5_000),
-         # Show actual bitmap files
-         :ok <- demo_loaded_images(sample_images),
-         :ok <- demo_step("all white", MoodBot.Display.display_image(all_white_image)),
-         :ok <- display_clear() do
-      IO.puts("✓ Comprehensive display demo finished with PNG and bitmap files! 🎉")
-    else
-      {:error, reason} ->
-        IO.puts("✗ Demo sequence failed 😞 Reason: #{reason}")
-    end
-  end
-
-  @spec demo_step(binary(), any()) :: any()
-  defp demo_step(description, operation) do
-    IO.puts("  📺 Displaying: #{description}")
-    operation
-  end
-
-  @spec demo_elixir_logo() :: :ok | {:error, binary()}
-  defp demo_elixir_logo do
-    logo_path = "priv/assets/logos/elixir.png"
-
-    case MoodBot.Images.ImageProcessor.process_for_display(logo_path) do
-      {:ok, logo_data} ->
-        demo_step("Elixir logo from #{logo_path}", MoodBot.Display.display_image(logo_data))
-
-      {:error, reason} ->
-        IO.puts("  ⚠️  Failed to load Elixir logo: #{reason}")
-        IO.puts("  📝 Continuing demo without logo...")
-        :ok
-    end
-  end
-
-  @spec demo_loaded_images(list(binary())) :: :ok
-  defp demo_loaded_images([]), do: :ok
-
-  defp demo_loaded_images([image_path | rest]) do
-    case MoodBot.Images.Bitmap.load_pbm(image_path) do
-      {:ok, image_data} ->
-        filename = Path.basename(image_path)
-
-        with :ok <- demo_step("PBM file: #{filename}", MoodBot.Display.display_image(image_data)),
-             :ok <- Process.sleep(3_000) do
-          demo_loaded_images(rest)
-        end
-
-      {:error, reason} ->
-        IO.puts("  ⚠️  Skipping #{image_path}: #{reason}")
-        demo_loaded_images(rest)
-    end
-  end
-
-  @doc "Show network status for all interfaces with visual indicators."
-  @spec network_status() :: map()
-  def network_status do
-    status = MoodBot.NetworkMonitor.get_status()
-
-    IO.puts("Network Status:")
-
-    Enum.each(status, fn {interface, info} ->
-      connection_icon = connection_icon(info.connection)
-
-      signal_info =
-        if Map.has_key?(info, :signal) and info.signal,
-          do: " #{signal_to_bars(info.signal)}",
-          else: ""
-
-      IO.puts("  #{interface}: #{connection_icon} #{info.state} #{signal_info}")
-      if info.ip, do: IO.puts("    IP: #{info.ip}")
-      if Map.get(info, :ssid), do: IO.puts("    SSID: #{info.ssid}")
-    end)
-
-    primary = MoodBot.NetworkMonitor.get_primary_interface()
-    internet = MoodBot.NetworkMonitor.has_internet?()
-
-    IO.puts("\nPrimary Interface: #{primary || "none"}")
-    IO.puts("Internet Access: #{if internet, do: "✓ Yes", else: "✗ No"}")
-
-    status
   end
 
   @doc "Show system information (hostname, target, interfaces, memory)."
