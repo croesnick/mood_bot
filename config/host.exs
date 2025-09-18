@@ -32,3 +32,16 @@ config :nerves_runtime,
        "a.nerves_fw_platform" => "host",
        "a.nerves_fw_version" => "0.0.0"
      }}
+
+# config :nx, default_backend: Nx.BinaryBackend
+config :nx, default_backend: EXLA.Backend
+config :nx, :default_defn_options, compiler: EXLA
+
+# Language models configuration for development
+# Use smaller models for faster loading during development
+config :mood_bot, :language_models, [
+  chat_model: [
+    repo: {:hf, "HuggingFaceTB/SmolLM2-1.7B", auth_token: System.get_env("HF_TOKEN")},
+    generation_config: [max_new_tokens: 100]
+  ]
+]

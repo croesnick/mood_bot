@@ -174,6 +174,17 @@ defmodule MoodBot.IExHelpers do
     result
   end
 
+  @doc "Chat with the language model"
+  def chat(prompt) when is_binary(prompt) do
+    chat(:chat_model, prompt)
+  end
+
+  @doc "Chat with a specific language model"
+  def chat(model_name, prompt) when is_atom(model_name) and is_binary(prompt) do
+    MoodBot.LanguageModels.Api.load_model(model_name)
+    {:ok, _task} = MoodBot.LanguageModels.Api.generate(model_name, prompt, &IO.write/1)
+  end
+
   @doc "Show network status for all interfaces with visual indicators."
   @spec network_status() :: map()
   def network_status do
@@ -408,6 +419,9 @@ defmodule MoodBot.IExHelpers do
 
     🔊 TTS Commands:
       speak("Hello world")                 - Speak text using Azure TTS
+
+    ✨ Language Model Commands:
+      chat("Hello, how are you?")          - Chat with the language model
 
     🔧 System Commands:
       system_info()                        - Show system information

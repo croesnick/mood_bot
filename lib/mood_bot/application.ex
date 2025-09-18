@@ -43,7 +43,9 @@ defmodule MoodBot.Application do
         # Start display with mock HAL for development
         {MoodBot.Display, []},
         # Start network monitor (will be inactive on host)
-        {MoodBot.NetworkMonitor, []}
+        # {MoodBot.NetworkMonitor, []},
+        # Start language model subsystem
+        {MoodBot.LanguageModels.Supervisor, models_config: Application.get_env(:mood_bot, :language_models, [])}
       ]
     end
   else
@@ -53,7 +55,9 @@ defmodule MoodBot.Application do
         # Start display with real hardware HAL
         {MoodBot.Display, []},
         # Start network monitor for real-time network status tracking
-        {MoodBot.NetworkMonitor, []}
+        # {MoodBot.NetworkMonitor, []},
+        # Start language model subsystem
+        {MoodBot.LanguageModels.Supervisor, models_config: Application.get_env(:mood_bot, :language_models, [])}
       ]
     end
   end

@@ -74,7 +74,7 @@ config :mdns_lite,
   # because otherwise any of the devices may respond to nerves.local leading to
   # unpredictable behavior.
 
-  hosts: [:hostname, "nerves"],
+  hosts: [:hostname, "moodbot"],
   ttl: 120,
 
   # Advertise the following services over mDNS.
@@ -117,3 +117,14 @@ config :mood_bot, MoodBot.Display.Driver,
     busy_gpio: {"gpiochip0", 24},
     pwr_gpio: {"gpiochip0", 18}
   }
+
+config :nx, default_backend: EXLA.Backend
+config :nx, :default_defn_options, compiler: EXLA
+
+# Language models configuration
+config :mood_bot, :language_models, [
+  chat_model: [
+    repo: {:hf, "HuggingFaceTB/SmolLM2-1.7B", auth_token: System.get_env("HF_TOKEN")},
+    generation_config: [max_new_tokens: 250]
+  ]
+]

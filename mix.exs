@@ -48,9 +48,13 @@ defmodule MoodBot.MixProject do
       {:toolshed, "~> 0.4.0"},
       {:typedstruct, "~> 0.5.3"},
       {:req, "~> 0.5.15"},
+      {:bumblebee, "~> 0.6.3"},
+      {:nx, "~> 0.9.0"},
+      {:exla, "~> 0.9.0"},
+      # {:rustler_precompiled, "~> 0.8.3", runtime: false},
+      # {:rustler, ">= 0.0.0", optional: true, runtime: false},
 
       # Image processing (host only - no cross-compilation issues)
-      # {:image, "~> 0.61", targets: [:host]},
       {:image, "~> 0.62", targets: [:host]},
       # Nerves support was added just in time :)
       # We just need to use the master branch of vix and override the version restriction imposed by image.
@@ -75,12 +79,8 @@ defmodule MoodBot.MixProject do
       # bumps to Nerves systems. Since these include Linux kernel and Erlang
       # version updates, please review their release notes in case
       # changes to your application are needed.
-      {:nerves_system_rpi0, "~> 1.24", runtime: false, targets: :rpi0},
-      {:nerves_system_rpi3, "~> 1.31", runtime: false, targets: :rpi3},
-      {:nerves_system_rpi3a, "~> 1.24", runtime: false, targets: :rpi3a},
-      {:nerves_system_rpi4, "~> 1.24", runtime: false, targets: :rpi4},
-      {:nerves_system_rpi5, "~> 0.2", runtime: false, targets: :rpi5},
-      {:nerves_system_x86_64, "~> 1.24", runtime: false, targets: :x86_64},
+      {:nerves_system_rpi3, "~> 1.31.2", runtime: false, targets: :rpi3},
+      {:nerves_system_rpi5, "~> 0.6.2", runtime: false, targets: :rpi5},
 
       # Development and testing dependencies
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
