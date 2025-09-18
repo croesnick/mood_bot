@@ -19,7 +19,7 @@ The application uses a target-conditional architecture where different child pro
 
 ## Development Instructions
 
-- Use the `hexdocs` mcp server to look up Elixir library documentation
+- Use the `context7` mcp server to look up Elixir library documentation
 - Run `mix format` after finishing a feature to ensure consistent code formatting
 - Run `mix credo --strict` and `mix dialyzer` and ensure all findings are dealt with
 - Always check if the usage documented in the README needs to be adjusted
@@ -32,49 +32,13 @@ The application uses a target-conditional architecture where different child pro
 
 ## Development Commands
 
-### Core Development
+We use a build VM to cross-build the firmware from Apple Silicon (macOS) for arm64 (Raspberry Pi). Therefore, all mix commands (`mix compile`, `mix firmware`, ...) should be run inside the VM by means of the run-in-vm script:
 
-```bash
-# Install dependencies
-mix deps.get
-
-# Run on host for development
-mix run
-
-# Run tests
-mix test
-
-# Interactive shell
-iex -S mix
+```shell
+./run-in-vm.sh "mix compile"
 ```
 
-### Firmware/Embedded Development
-
-```bash
-# Build firmware
-MIX_TARGET=rpi3 mix firmware
-
-# Burn to SD card
-MIX_TARGET=rpi3 mix burn
-
-# Upload to running device
-MIX_TARGET=rpi3 mix upload
-```
-
-## Key Dependencies
-
-- **Nerves**: Embedded systems framework
-- **nerves_pack**: Common networking and utilities for Nerves
-- **ring_logger**: Circular buffer logging for embedded systems
-- **toolshed**: Debugging utilities for Nerves
-- **shoehorn**: Application bootstrap for embedded systems
-
-## Development Notes
-
-- Use `config/host.exs` for host-specific development configuration
-- Use `config/target.exs` for embedded target configuration
-- The preferred CLI target for `run` and `test` is `:host`
-- Firmware includes custom rootfs overlay from `rootfs_overlay/`
+Formatting, however, can still be run on the development host: `mix format`.
 
 ## Nerves Device Debugging
 

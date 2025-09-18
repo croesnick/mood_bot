@@ -1,10 +1,8 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
-set -eux
+set -euo pipefail
 
-MIX_TARGET=rpi3 mix firmware
-MIX_TARGET=rpi3 mix upload
+./run-in-vm.sh "mix deps.get && mix firmware && mix upload moodbot.run"
 
 sleep 15s
-
-ssh moodbot.local
+ssh -t moodbot.run

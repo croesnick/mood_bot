@@ -927,3 +927,4 @@ MIT License
 [eink-frame]: https://www.printables.com/model/401112-frame-for-29-e-paper-waveshare-display-module/files
 [eink-rpi-case]: https://www.printables.com/model/159370-waveshare-29-inch-case-for-esphomehomeassistant-di
 [scenic]: https://hexdocs.pm/scenic/overview_general.html
+[nerves-underjord]: https://underjord.io/to-nerves-from-elixir.html

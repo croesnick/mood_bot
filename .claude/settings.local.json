@@ -2,12 +2,12 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(mix compile)",
+      "Bash(mix compile:*)",
       "Bash(mix credo:*)",
       "Bash(mix deps.get:*)",
       "Bash(mix dialyzer:*)",
-      "Bash(mix format)",
       "Bash(mix test:*)",
+      "Bash(mix format:*)",
       "Bash(mix test)",
       "mcp__hexdocs__fetch",
       "mcp__hexdocs__search",
@@ -16,12 +16,11 @@
       "Bash(ping:*)",
       "Bash(MIX_TARGET=rpi3 mix firmware)",
       "Bash(MIX_TARGET=rpi3 mix upload)",
-      "Bash(mix format:*)",
       "Bash(iex:*)",
       "Bash(mix process_image:*)",
       "WebFetch(domain:hexdocs.pm)",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__get-library-docs"
+      "mcp__context7__get-library-docs",
     ],
     "deny": []
   },

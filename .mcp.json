@@ -1,11 +1,11 @@
 {
   "mcpServers": {
-    "hexdocs": {
+    "context7": {
       "type": "stdio",
       "command": "npx",
       "args": [
         "-y",
-        "hexdocs-mcp@0.6.0"
+        "@upstash/context7-mcp"
       ],
       "env": {}
     },
@@ -16,8 +16,22 @@
         "-y",
         "ssh-mcp",
         "--",
-        "--host=nerves.local",
+        "--host=moodbot.run",
         "--user=root",
+        "--key=${HOME}/.ssh/id_ed25519"
+      ],
+      "env": {}
+    },
+    "moodbot-build": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "ssh-mcp",
+        "--",
+        "--host=moodbot.build",
+        "--port=2222",
+        "--user=crntng",
         "--key=${HOME}/.ssh/id_rsa"
       ],
       "env": {}
