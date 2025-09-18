@@ -13,13 +13,13 @@ defmodule MoodBot.TTS.Azure do
   @spec stream(String.t(), function()) :: :ok | {:error, String.t()}
   def stream(text, callback) do
     case Req.post(@azure_speech_service_url,
-      body: request_body(text),
-      headers: request_headers(),
-      into: fn {:data, data}, acc ->
-        callback.(data)
-        {:cont, acc}
-      end
-    ) do
+           body: request_body(text),
+           headers: request_headers(),
+           into: fn {:data, data}, acc ->
+             callback.(data)
+             {:cont, acc}
+           end
+         ) do
       {:ok, %{status: 200}} ->
         :ok
 

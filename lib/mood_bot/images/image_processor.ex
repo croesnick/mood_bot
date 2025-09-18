@@ -78,7 +78,10 @@ defmodule MoodBot.Images.ImageProcessor do
         case convert_to_monochrome(image, mode) do
           {:ok, mono} ->
             {mono_width, mono_height, mono_bands} = Image.shape(mono)
-            Logger.info("DEBUG: Monochrome conversion - #{mono_width}x#{mono_height}, bands: #{mono_bands}")
+
+            Logger.info(
+              "DEBUG: Monochrome conversion - #{mono_width}x#{mono_height}, bands: #{mono_bands}"
+            )
 
             case resize_to_display(mono) do
               {:ok, resized} ->
@@ -89,20 +92,23 @@ defmodule MoodBot.Images.ImageProcessor do
                   {:ok, binary} ->
                     Logger.info("DEBUG: Packed binary size: #{byte_size(binary)} bytes")
                     {:ok, binary}
-                  error -> 
+
+                  error ->
                     Logger.error("DEBUG: Pack failed: #{inspect(error)}")
                     error
                 end
-              error -> 
+
+              error ->
                 Logger.error("DEBUG: Resize failed: #{inspect(error)}")
                 error
             end
-          error -> 
+
+          error ->
             Logger.error("DEBUG: Monochrome conversion failed: #{inspect(error)}")
             error
         end
       else
-        error -> 
+        error ->
           Logger.error("DEBUG: Load failed: #{inspect(error)}")
           error
       end
@@ -321,7 +327,7 @@ defmodule MoodBot.Images.ImageProcessor do
       # This was the placeholder function creating the checkerboard pattern!
       # Let's implement proper pixel extraction from the processed image
       {width, height, _bands} = Image.shape(image)
-      
+
       # Extract actual pixel values from the image
       case extract_pixel_binary(image, width, height) do
         {:ok, display_binary} -> {:ok, display_binary}
@@ -331,12 +337,12 @@ defmodule MoodBot.Images.ImageProcessor do
       error ->
         {:error, "Image conversion failed: #{inspect(error)}"}
     end
-    
+
     defp extract_pixel_binary(image, width, height) do
       # Save as a temporary PNG and re-process it through the original pipeline
       # This ensures we use the same logic but with the processed image
       temp_path = Path.join(System.tmp_dir!(), "mood_bot_pixel_#{:rand.uniform(999_999)}.png")
-      
+
       with {:ok, _} <- Image.write(image, temp_path),
            {:ok, reloaded_image} <- Image.open(temp_path),
            {:ok, final_binary} <- process_to_binary_pixels(reloaded_image, width, height) do
@@ -348,20 +354,20 @@ defmodule MoodBot.Images.ImageProcessor do
           {:error, "Pixel extraction failed: #{inspect(error)}"}
       end
     end
-    
+
     defp process_to_binary_pixels(image, width, height) do
       # Create simple alternating pattern for testing - this is temporary!
       total_pixels = width * height
       bytes_needed = div(total_pixels, 8)
-      
+
       # Generate test pattern - each byte alternates 0x00 (black) and 0xFF (white)
-      binary_data = 
+      binary_data =
         1..bytes_needed
-        |> Enum.map(fn i -> 
-            if rem(i, 2) == 0, do: <<0x00>>, else: <<0xFF>> 
-          end)
+        |> Enum.map(fn i ->
+          if rem(i, 2) == 0, do: <<0x00>>, else: <<0xFF>>
+        end)
         |> IO.iodata_to_binary()
-      
+
       {:ok, binary_data}
     end
 
@@ -379,10 +385,12 @@ defmodule MoodBot.Images.ImageProcessor do
           try do
             case Image.normalize(image) do
               {:ok, normalized} -> {:ok, normalized}
-              {:error, _reason} -> {:ok, image}  # Return original if nothing works
+              # Return original if nothing works
+              {:error, _reason} -> {:ok, image}
             end
           rescue
-            _error -> {:ok, image}  # Return original as last resort
+            # Return original as last resort
+            _error -> {:ok, image}
           end
       end
     end
@@ -398,23 +406,30 @@ defmodule MoodBot.Images.ImageProcessor do
               {:ok, binary_image} -> {:ok, binary_image}
               {:error, reason} -> {:error, "Binary conversion failed: #{inspect(reason)}"}
             end
-          {:error, reason} -> {:error, "Threshold operation failed: #{inspect(reason)}"}
+
+          {:error, reason} ->
+            {:error, "Threshold operation failed: #{inspect(reason)}"}
         end
       rescue
         _error ->
           # Fallback approach using histogram equalization
           try do
             case Image.equalize(image, :all) do
-              {:ok, equalized} -> 
+              {:ok, equalized} ->
                 # Try simple thresholding on equalized image
                 case apply_simple_threshold(equalized, threshold) do
                   {:ok, binary} -> {:ok, binary}
-                  {:error, _reason} -> {:ok, equalized}  # Return equalized if threshold fails
+                  # Return equalized if threshold fails
+                  {:error, _reason} -> {:ok, equalized}
                 end
-              {:error, _reason} -> {:ok, image}  # Return original if equalization fails
+
+              # Return original if equalization fails
+              {:error, _reason} ->
+                {:ok, image}
             end
           rescue
-            _error -> {:ok, image}  # Last resort: return original
+            # Last resort: return original
+            _error -> {:ok, image}
           end
       end
     end
@@ -439,6 +454,7 @@ defmodule MoodBot.Images.ImageProcessor do
             {:ok, no_alpha} -> {:ok, no_alpha}
             {:error, reason} -> {:error, "Failed to flatten alpha: #{inspect(reason)}"}
           end
+
         false ->
           {:ok, image}
       end

@@ -66,18 +66,25 @@ defmodule Mix.Tasks.ProcessImage do
         :pbm ->
           IO.puts("💾 Saving as P1 ASCII PBM format for inspection...")
           # Bypass the broken pack_for_display path and use direct image processing
-          case MoodBot.Images.ImageProcessor.process_and_save_for_inspection(input_path, output_path <> ".temp.png", mode) do
+          case MoodBot.Images.ImageProcessor.process_and_save_for_inspection(
+                 input_path,
+                 output_path <> ".temp.png",
+                 mode
+               ) do
             :ok ->
               # Convert the processed PNG to PBM using Image library
               case convert_png_to_pbm(output_path <> ".temp.png", output_path) do
                 :ok ->
                   # File.rm(output_path <> ".temp.png")
                   :ok
+
                 error ->
                   File.rm(output_path <> ".temp.png")
                   error
               end
-            error -> error
+
+            error ->
+              error
           end
 
         :preview ->
@@ -175,12 +182,14 @@ defmodule Mix.Tasks.ProcessImage do
     x_offset = div(canvas_width - img_width, 2)
     y_offset = div(canvas_height - img_height, 2)
 
-    with {:ok, centered_image} <- Image.embed(image, 128, 296, background_color: :white, x: x_offset, y: y_offset) do
-        Image.write(centered_image, "debug.png")
+    with {:ok, centered_image} <-
+           Image.embed(image, 128, 296, background_color: :white, x: x_offset, y: y_offset) do
+      Image.write(centered_image, "debug.png")
       {:ok, centered_image}
     else
       error -> {:error, "Failed to center image: #{inspect(error)}"}
     end
+
     # with {:ok, white_canvas} <- Image.new(canvas_width, canvas_height, color: [255, 255, 255]),
     #      {:ok, centered_image} <- Image.compose(white_canvas, image, blend_mode: :over, x: x_offset, y: y_offset) do
     #     Image.write(centered_image, "debug.png")
@@ -210,7 +219,8 @@ defmodule Mix.Tasks.ProcessImage do
   end
 
   defp format_as_p1_pbm(pixel_data, width, height, source_path) do
-    header = "P1\n# Conversion of #{Path.basename(source_path)} to PBM format\n#{width} #{height}\n"
+    header =
+      "P1\n# Conversion of #{Path.basename(source_path)} to PBM format\n#{width} #{height}\n"
 
     # Convert pixel data to rows of space-separated 0s and 1s
     rows =
