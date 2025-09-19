@@ -1,9 +1,9 @@
 {
     "recommendations": [
-        "jakebecker.elixir-ls",
+        "lexical-lsp.lexical",
         "pantajoe.vscode-elixir-credo",
         "anthropic.claude-code",
         "usernamehw.errorlens",
-        "donjayamanne.githistory"
+        "donjayamanne.githistory",
     ]
 }
