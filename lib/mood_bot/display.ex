@@ -630,20 +630,23 @@ defmodule MoodBot.Display do
 
     state = transition_to_state(state, :power_saving)
 
-    case Driver.hibernate(state.driver_state) do
-      {:ok, driver_state} ->
-        updated_state =
-          state
-          |> Map.put(:driver_state, driver_state)
-          |> Map.put(:power_save_timer_ref, nil)
+    with {:ok, state} <- validate_hibernation_ready(state),
+         {:ok, driver_state} <- Driver.hibernate(state.driver_state) do
+      updated_state =
+        state
+        |> Map.put(:driver_state, driver_state)
+        |> Map.put(:power_save_timer_ref, nil)
 
-        {:noreply, updated_state}
-
+      {:noreply, updated_state}
+    else
       {:error, reason} ->
         Logger.error("Display: Power save failed",
           error: reason,
           operation: :power_save,
           refresh_state: state.refresh_state,
+          display_state: state.display_state,
+          initialized: state.initialized?,
+          driver_state_nil: state.driver_state == nil,
           time_since_last_activity:
             if(state.last_activity_time,
               do: System.monotonic_time(:millisecond) - state.last_activity_time,
@@ -816,6 +819,24 @@ defmodule MoodBot.Display do
     end
   end
 
+  defp validate_driver_state(state) do
+    if state.driver_state != nil do
+      {:ok, state}
+    else
+      {:error, :driver_not_initialized}
+    end
+  end
+
+  defp validate_hibernation_ready(state) do
+    with {:ok, state} <- validate_initialization(state),
+         {:ok, state} <- validate_driver_state(state) do
+      {:ok, state}
+    else
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   # Operation helper functions
   defp perform_clear_operation(state, data) do
     state = transition_to_state(state, :updating_display)
@@ -892,14 +913,28 @@ defmodule MoodBot.Display do
     %{state | refresh_timer_ref: timer_ref}
   end
 
+  defp should_schedule_power_timer?(state) do
+    state.initialized? and state.driver_state != nil
+  end
+
   defp schedule_power_save_timer(state) do
     # Cancel existing timer if present
     if state.power_save_timer_ref do
       Process.cancel_timer(state.power_save_timer_ref)
     end
 
-    timer_ref = Process.send_after(self(), :power_save, @power_save_interval_ms)
-    %{state | power_save_timer_ref: timer_ref}
+    if should_schedule_power_timer?(state) do
+      timer_ref = Process.send_after(self(), :power_save, @power_save_interval_ms)
+      %{state | power_save_timer_ref: timer_ref}
+    else
+      Logger.debug("Display: Skipping power save timer - display not ready",
+        initialized: state.initialized?,
+        driver_state_nil: state.driver_state == nil,
+        display_state: state.display_state
+      )
+
+      %{state | power_save_timer_ref: nil}
+    end
   end
 
   defp update_activity_time(state) do
