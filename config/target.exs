@@ -6,6 +6,10 @@ import Config
 
 config :logger, backends: [RingLogger]
 
+config :logger, RingLogger,
+  format: "$time [$level] $message | $metadata\n",
+  metadata: [:duration_ms, :repo, :pid, :name, :error, :api_name, :serving_name, :model_config, :config, :message]
+
 # Use shoehorn to start the main application. See the shoehorn
 # library documentation for more control in ordering how OTP
 # applications are started and handling failures.

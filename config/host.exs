@@ -2,6 +2,22 @@ import Config
 
 # Add configuration that is only needed when running on the host here.
 
+# Configure logger to display metadata in console output during development
+config :logger, :default_formatter,
+  format: "$time [$level] $message | $metadata\n",
+  metadata: [
+    :duration_ms,
+    :repo,
+    :pid,
+    :name,
+    :error,
+    :api_name,
+    :serving_name,
+    :model_config,
+    :config,
+    :message
+  ]
+
 # Display configuration for development
 config :mood_bot, MoodBot.Display,
   # Enable bitmap saving in development for visual debugging
