@@ -28,14 +28,19 @@ defmodule MoodBot.LanguageModels.Supervisor do
     Logger.debug("Extracted models_config for API GenServers", models_config: models_config)
 
     # Define static children
-    children = [
-      # Start the dynamic supervisor for Nx.Serving processes first
-      {MoodBot.LanguageModels.ServingSupervisor, []}
+    children =
+      [
+        # Start the dynamic supervisor for Nx.Serving processes first
+        {MoodBot.LanguageModels.ServingSupervisor, []}
 
-      # Start API GenServers as static children (one per model config)
-    ] ++ Enum.map(models_config, fn {name, config} ->
-      {MoodBot.LanguageModels.Api, name: name, model_config: config}
-    end)
+        # Start API GenServers as static children (one per model config)
+      ] ++
+        Enum.map(models_config, fn {name, config} ->
+          Supervisor.child_spec(
+            {MoodBot.LanguageModels.Api, name: name, model_config: config},
+            id: {MoodBot.LanguageModels.Api, name}
+          )
+        end)
 
     Logger.info("Starting Language Model children", count: length(children))
 

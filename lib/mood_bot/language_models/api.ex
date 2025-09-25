@@ -64,33 +64,26 @@ defmodule MoodBot.LanguageModels.Api do
   end
 
   @doc """
-  Generates text based on the given prompt asynchronously, calling the provided callback function
+  Generates text based on the given prompt, calling the provided callback function
   with each text chunk as it's generated.
 
-  The callback function is executed within a Task process linked to the caller,
-  providing non-blocking generation while maintaining proper supervision.
+  The generation runs synchronously in the calling process, providing
+  simpler error handling and resource management.
 
-  Returns `{:ok, task_pid}` if generation starts successfully,
-  or `{:error, reason}` if the model is not loaded or task creation fails.
+  Returns `:ok` if generation completes successfully,
+  or `{:error, reason}` if the model is not loaded or generation fails.
 
   ## Examples
 
-      # Stream to IO asynchronously
-      {:ok, task} = MoodBot.LanguageModels.Api.generate(:smollm_1_7b, "Tell me about Elixir", &IO.write/1)
+      # Stream to IO
+      :ok = MoodBot.LanguageModels.Api.generate(:smollm_1_7b, "Tell me about Elixir", &IO.write/1)
 
   """
-  @spec generate(atom(), String.t(), (String.t() -> any())) :: {:ok, pid()} | {:error, any()}
+  @spec generate(atom(), String.t(), (String.t() -> any())) :: :ok | {:error, any()}
   def generate(name, prompt, callback) when is_function(callback, 1) do
     case GenServer.call(name, :status) do
       :loaded ->
-        GenServer.cast(name, {:generate, prompt, callback, self()})
-
-        receive do
-          {:generation_started, task_pid} -> {:ok, task_pid}
-          {:generation_error, reason} -> {:error, reason}
-        after
-          5000 -> {:error, :task_start_timeout}
-        end
+        GenServer.call(name, {:generate, prompt, callback}, :infinity)
 
       status ->
         {:error, {:model_not_loaded, status}}
@@ -139,8 +132,6 @@ defmodule MoodBot.LanguageModels.Api do
   end
 
   def handle_call(:load_model, _from, state) do
-    Logger.info("Starting model loading process")
-
     new_state = %{state | status: :loading, error_reason: nil}
 
     with {:ok, loaded_state} <- do_load_model(new_state) do
@@ -162,21 +153,18 @@ defmodule MoodBot.LanguageModels.Api do
   end
 
   @impl true
-  def handle_cast({:generate, prompt, callback, caller_pid}, %{status: :loaded} = state) do
-    case do_generate(prompt, callback, caller_pid, state) do
-      {:ok, task_pid} ->
-        send(caller_pid, {:generation_started, task_pid})
-        {:noreply, state}
+  def handle_call({:generate, prompt, callback}, _from, %{status: :loaded} = state) do
+    case do_generate(prompt, callback, state) do
+      :ok ->
+        {:reply, :ok, state}
 
       {:error, reason} ->
-        send(caller_pid, {:generation_error, reason})
-        {:noreply, state}
+        {:reply, {:error, reason}, state}
     end
   end
 
-  def handle_cast({:generate, _prompt, _callback, caller_pid}, %{status: status} = state) do
-    send(caller_pid, {:generation_error, {:model_not_loaded, status}})
-    {:noreply, state}
+  def handle_call({:generate, _prompt, _callback}, _from, %{status: status} = state) do
+    {:reply, {:error, {:model_not_loaded, status}}, state}
   end
 
   @impl true
@@ -346,7 +334,6 @@ defmodule MoodBot.LanguageModels.Api do
         Bumblebee.Text.generation(model_info, tokenizer, generation_config,
           compile: [batch_size: 1, sequence_length: 1028],
           stream: true
-          # defn_options: [compiler: EXLA]
         )
 
       end_time = System.monotonic_time(:millisecond)
@@ -360,8 +347,7 @@ defmodule MoodBot.LanguageModels.Api do
 
         Logger.error("Bumblebee serving creation failed",
           error: error,
-          duration_ms: duration,
-          backend: Nx.default_backend()
+          duration_ms: duration
         )
 
         {:error, {:serving_creation_failed, error}}
@@ -393,39 +379,25 @@ defmodule MoodBot.LanguageModels.Api do
     end
   end
 
-  @spec do_generate(String.t(), (String.t() -> any()), pid(), state()) ::
-          {:ok, pid()} | {:error, any()}
-  defp do_generate(prompt, callback, _caller_pid, %{serving_name: serving_name})
+  @spec do_generate(String.t(), (String.t() -> any()), state()) ::
+          :ok | {:error, any()}
+  defp do_generate(prompt, callback, %{serving_name: serving_name})
        when is_atom(serving_name) do
-    try do
-      # Start a Task linked to the caller for async stream processing
-      task_pid =
-        Task.start_link(fn ->
-          try do
-            Nx.Serving.batched_run(serving_name, prompt)
-            |> Enum.each(callback)
-          rescue
-            error ->
-              Logger.error("Generation task failed", error: error, serving_name: serving_name)
-              # Task will exit with error, linked caller will receive EXIT signal
-              exit({:generation_failed, error})
-          catch
-            :exit, reason ->
-              Logger.error("Generation task caught exit",
-                reason: reason,
-                serving_name: serving_name
-              )
+    Nx.Serving.batched_run(serving_name, prompt)
+    |> Enum.each(callback)
 
-              exit({:serving_exit, reason})
-          end
-        end)
+    :ok
+  rescue
+    error ->
+      Logger.error("Generation failed", error: error, serving_name: serving_name)
+      {:error, {:generation_failed, error}}
+  catch
+    :exit, reason ->
+      Logger.error("Generation caught exit",
+        reason: reason,
+        serving_name: serving_name
+      )
 
-      case task_pid do
-        {:ok, pid} -> {:ok, pid}
-        {:error, reason} -> {:error, {:task_start_failed, reason}}
-      end
-    rescue
-      error -> {:error, {:task_creation_failed, error}}
-    end
+      {:error, {:serving_exit, reason}}
   end
 end

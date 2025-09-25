@@ -45,7 +45,8 @@ defmodule MoodBot.Application do
         # Start network monitor (will be inactive on host)
         # {MoodBot.NetworkMonitor, []},
         # Start language model subsystem
-        {MoodBot.LanguageModels.Supervisor, models_config: Application.get_env(:mood_bot, :language_models, [])}
+        {MoodBot.LanguageModels.Supervisor,
+         models_config: Application.get_env(:mood_bot, :language_models, [])}
       ]
     end
   else
@@ -57,7 +58,8 @@ defmodule MoodBot.Application do
         # Start network monitor for real-time network status tracking
         # {MoodBot.NetworkMonitor, []},
         # Start language model subsystem
-        {MoodBot.LanguageModels.Supervisor, models_config: Application.get_env(:mood_bot, :language_models, [])}
+        {MoodBot.LanguageModels.Supervisor,
+         models_config: Application.get_env(:mood_bot, :language_models, [])}
       ]
     end
   end

@@ -122,9 +122,20 @@ config :nx, default_backend: EXLA.Backend
 config :nx, :default_defn_options, compiler: EXLA
 
 # Language models configuration
-config :mood_bot, :language_models, [
-  chat_model: [
-    repo: {:hf, "HuggingFaceTB/SmolLM2-1.7B", auth_token: System.get_env("HF_TOKEN")},
-    generation_config: [max_new_tokens: 250]
+config :mood_bot, :language_models,
+  llama_3_2_1b: [
+    repo: {:hf, "meta-llama/Llama-3.2-1B-Instruct", auth_token: System.get_env("HF_TOKEN")},
+    generation_config: [max_new_tokens: 1000]
+  ],
+  smollm_2_1_7b: [
+    repo: {:hf, "HuggingFaceTB/SmolLM2-1.7B-Instruct", auth_token: System.get_env("HF_TOKEN")},
+    generation_config: [max_new_tokens: 1000]
+  ],
+  smollm_2_360m: [
+    repo: {:hf, "HuggingFaceTB/SmolLM2-360M-Instruct", auth_token: System.get_env("HF_TOKEN")},
+    generation_config: [max_new_tokens: 1000]
+  ],
+  smollm_2_135m: [
+    repo: {:hf, "HuggingFaceTB/SmolLM2-135M-Instruct", auth_token: System.get_env("HF_TOKEN")},
+    generation_config: [max_new_tokens: 1000]
   ]
-]

@@ -316,6 +316,26 @@ But there's [currently no support for nerves](https://elixirforum.com/t/project-
 [Raspberry Pi AI HAT+](https://www.berrybase.de/raspberry-pi-ai-hat-13-tops-hailo-8l-accelerator) also looks amazing.
 But I have not found yet if exla with [`XLA_TARGET=tpu`](https://github.com/elixir-nx/xla?tab=readme-ov-file#xla_target) can actually use it.
 
+## Runtime Notes
+
+```plaintext
+21:27:29.116 [info] Loading language model | pid=<0.1833.0> 
+21:27:29.116 [info] Loading Bumblebee model | pid=<0.1833.0> 
+21:28:39.035 [info] Bumblebee model loaded successfully | duration_ms=69920 pid=<0.1833.0> 
+21:28:39.036 [info] Loading Bumblebee tokenizer | pid=<0.1833.0> 
+21:28:39.975 [info] Bumblebee tokenizer loaded successfully | duration_ms=939 pid=<0.1833.0> 
+21:28:39.975 [info] Loading Bumblebee generation config | pid=<0.1833.0> 
+21:28:40.094 [info] Bumblebee generation config loaded successfully | duration_ms=119 pid=<0.1833.0> 
+21:28:40.094 [info] Creating Bumblebee Text.generation serving | pid=<0.1833.0> 
+21:28:40.094 [info] EXLA backend status | pid=<0.1833.0> 
+21:28:40.098 [info] Bumblebee serving created successfully | duration_ms=5 pid=<0.1833.0> 
+21:28:40.098 [info] Starting serving child process | pid=<0.1833.0> api_name=chat_model serving_name=chat_model.Serving.3 
+21:29:14.495 [info] Started Nx.Serving process | pid=<0.1872.0> name=chat_model.Serving.3 
+21:29:14.495 [info] Serving child started successfully | pid=<0.1833.0> api_name=chat_model serving_name=chat_model.Serving.3 
+21:29:14.495 [info] Language model loading completed successfully | duration_ms=105379 pid=<0.1833.0> serving_name=chat_model.Serving.3 
+21:29:14.495 [info] Model loaded successfully | pid=<0.1833.0>
+```
+
 ## References
 
 - [LLMs like DeepSeek on Raspberry Pi 5](https://buyzero.de/blogs/news/deepseek-on-raspberry-pi-5-16gb-a-step-by-step-guide-to-local-llm-inference)
@@ -323,3 +343,10 @@ But I have not found yet if exla with [`XLA_TARGET=tpu`](https://github.com/elix
 - [Sentiment analysis using BERT models](https://medium.com/@alexrodriguesj/sentiment-analysis-with-bert-a-comprehensive-guide-6d4d091eb6bb)
 - [An overview on SLMs - Small Language Models](https://huggingface.co/blog/jjokah/small-language-model)
 - [How Well Do LLMs Perform on a Raspberry Pi 5?](https://www.stratosphereips.org/blog/2025/6/5/how-well-do-llms-perform-on-a-raspberry-pi-5) -- very well-done overview!
+- [AN LLM FOR THE RASPBERRY PI](https://hackaday.com/2025/05/10/an-llm-for-the-raspberry-pi/)
+- [Nerves and firmware build](https://elixirforum.com/t/custom-nerves-firmware-for-rpi5-issues/67239)
+- [Hailo AI Module](https://elixirforum.com/t/nerves-rpi5-hailo8-m-2-ai-module-support/68142/7)
+- <https://github.com/vittoriabitton/nx_hailo/tree/main/nx_hailo>
+- <https://www.raspberrypi.com/news/raspberry-pi-ai-hat/>
+- [hailo-ai/hailo-rpi5-examples](https://github.com/hailo-ai/hailo-rpi5-examples)
+- [Bumblebee model cache directory](https://hexdocs.pm/bumblebee/Bumblebee.html#cache_dir/0)

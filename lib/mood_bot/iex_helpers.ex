@@ -182,7 +182,7 @@ defmodule MoodBot.IExHelpers do
   @doc "Chat with a specific language model"
   def chat(model_name, prompt) when is_atom(model_name) and is_binary(prompt) do
     MoodBot.LanguageModels.Api.load_model(model_name)
-    {:ok, _task} = MoodBot.LanguageModels.Api.generate(model_name, prompt, &IO.write/1)
+    MoodBot.LanguageModels.Api.generate(model_name, prompt, &IO.write/1)
   end
 
   @doc "Show network status for all interfaces with visual indicators."
