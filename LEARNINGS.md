@@ -565,3 +565,7 @@ curl -X POST "https://${AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitives
   </speak>' \
   --output test.wav
 ```
+
+## Assorted
+
+- [UTM network setup considerations](https://github.com/utmapp/UTM/discussions/3574)
