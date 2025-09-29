@@ -155,11 +155,11 @@ defmodule MoodBot.LanguageModels.Api do
   @impl true
   def handle_call({:generate, prompt, callback}, _from, %{status: :loaded} = state) do
     case do_generate(prompt, callback, state) do
-      :ok ->
-        {:reply, :ok, state}
-
       {:error, reason} ->
         {:reply, {:error, reason}, state}
+
+      result ->
+        {:reply, result, state}
     end
   end
 
@@ -333,6 +333,7 @@ defmodule MoodBot.LanguageModels.Api do
       serving =
         Bumblebee.Text.generation(model_info, tokenizer, generation_config,
           compile: [batch_size: 1, sequence_length: 1028],
+          defn_options: [compiler: EXLA],
           stream: true
         )
 
@@ -380,13 +381,12 @@ defmodule MoodBot.LanguageModels.Api do
   end
 
   @spec do_generate(String.t(), (String.t() -> any()), state()) ::
-          :ok | {:error, any()}
+          list(String.t()) | {:error, any()}
   defp do_generate(prompt, callback, %{serving_name: serving_name})
        when is_atom(serving_name) do
     Nx.Serving.batched_run(serving_name, prompt)
-    |> Enum.each(callback)
-
-    :ok
+    |> Stream.each(callback)
+    |> Enum.to_list()
   rescue
     error ->
       Logger.error("Generation failed", error: error, serving_name: serving_name)

@@ -350,3 +350,5 @@ But I have not found yet if exla with [`XLA_TARGET=tpu`](https://github.com/elix
 - <https://www.raspberrypi.com/news/raspberry-pi-ai-hat/>
 - [hailo-ai/hailo-rpi5-examples](https://github.com/hailo-ai/hailo-rpi5-examples)
 - [Bumblebee model cache directory](https://hexdocs.pm/bumblebee/Bumblebee.html#cache_dir/0)
+- [Fine tune Mistral 7B with the RTX 4090 and serve it with Nx](https://toranbillups.com/blog/archive/2023/10/21/fine-tune-mistral-and-serve-with-nx/?utm_source=elixir-merge)
+- [Bumblebee: Slow load_model in GenServer, slow Nx.Serving.run in exs file](https://elixirforum.com/t/bumblebee-slow-load-model-in-genserver-slow-nx-serving-run-in-exs-file/71888)
