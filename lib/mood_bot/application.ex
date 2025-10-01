@@ -46,7 +46,11 @@ defmodule MoodBot.Application do
         # {MoodBot.NetworkMonitor, []},
         # Start language model subsystem
         {MoodBot.LanguageModels.Supervisor,
-         models_config: Application.get_env(:mood_bot, :language_models, [])}
+         models_config: Application.get_env(:mood_bot, :language_models, [])},
+        # Start Whisper serving for speech-to-text
+        {MoodBot.STT.Whisper, []},
+        # Start STT manager for recording coordination
+        {MoodBot.STT.Manager, []}
       ]
     end
   else
@@ -59,7 +63,11 @@ defmodule MoodBot.Application do
         # {MoodBot.NetworkMonitor, []},
         # Start language model subsystem
         {MoodBot.LanguageModels.Supervisor,
-         models_config: Application.get_env(:mood_bot, :language_models, [])}
+         models_config: Application.get_env(:mood_bot, :language_models, [])},
+        # Start Whisper serving for speech-to-text
+        {MoodBot.STT.Whisper, []},
+        # Start STT manager for recording coordination
+        {MoodBot.STT.Manager, []}
       ]
     end
   end

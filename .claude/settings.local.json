@@ -20,13 +20,9 @@
       "Bash(mix process_image:*)",
       "WebFetch(domain:hexdocs.pm)",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__get-library-docs",
+      "mcp__context7__get-library-docs"
     ],
     "deny": []
   },
-  "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": [
-    "hexdocs",
-    "ssh-nerves"
-  ]
+  "enableAllProjectMcpServers": true
 }

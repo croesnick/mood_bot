@@ -186,6 +186,40 @@ defmodule MoodBot.IExHelpers do
     IO.puts(inspect(result))
   end
 
+  def test_stream_audio() do
+    Membrane.Pipeline.start_link(MoodBot.MembraneAudioStreamingTest, [])
+  end
+
+  @doc "Start recording audio (button press simulation)"
+  def record_start do
+    result = MoodBot.STT.Manager.start_recording()
+
+    case result do
+      :ok ->
+        IO.puts("✓ Recording started. Use record_stop() to stop and transcribe.")
+
+      {:error, reason} ->
+        IO.puts("✗ Failed to start recording: #{inspect(reason)}")
+    end
+
+    result
+  end
+
+  @doc "Stop recording and transcribe audio"
+  def record_stop do
+    result = MoodBot.STT.Manager.stop_recording()
+
+    case result do
+      {:ok, text} ->
+        IO.puts("✓ Transcription: #{text}")
+
+      {:error, reason} ->
+        IO.puts("✗ Failed to stop recording: #{inspect(reason)}")
+    end
+
+    result
+  end
+
   @doc "Show network status for all interfaces with visual indicators."
   @spec network_status() :: map()
   def network_status do
@@ -423,6 +457,10 @@ defmodule MoodBot.IExHelpers do
 
     ✨ Language Model Commands:
       chat("Hello, how are you?")          - Chat with the language model
+
+    🎤 Voice Commands:
+      record_start()                       - Start recording audio
+      record_stop()                        - Stop recording and transcribe
 
     🔧 System Commands:
       system_info()                        - Show system information

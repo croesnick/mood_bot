@@ -64,6 +64,13 @@ defmodule MoodBot.MixProject do
        branch: "master",
        override: true,
        targets: [:host]},
+      {:membrane_core, "~> 1.2"},
+      {:membrane_ffmpeg_swresample_plugin, "~> 0.20.2"},
+      {:membrane_file_plugin, "~> 0.17.2"},
+      {:membrane_hackney_plugin, "~> 0.11.0"},
+      # {:membrane_mp3_lame_plugin, "~> 0.18.3"},
+      {:membrane_mp3_mad_plugin, "~> 0.18.4"},
+      {:membrane_portaudio_plugin, "~> 0.19.2"},
 
       # Allow Nerves.Runtime on host to support development, testing and CI.
       # See config/host.exs for usage.
