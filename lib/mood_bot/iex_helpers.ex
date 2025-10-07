@@ -186,6 +186,30 @@ defmodule MoodBot.IExHelpers do
     IO.puts(inspect(result))
   end
 
+  @doc "Analyze sentiment of German text"
+  def analyze_sentiment(text) when is_binary(text) do
+    result = MoodBot.SentimentAnalysis.analyze(text)
+
+    case result do
+      {:ok, sentiment} ->
+        sentiment_icon =
+          case sentiment do
+            :happy -> "😊"
+            :affirmation -> "👍"
+            :skeptic -> "🤨"
+            :surprised -> "😮"
+            :crying -> "😢"
+          end
+
+        IO.puts("✓ Sentiment: #{sentiment} #{sentiment_icon}")
+
+      {:error, reason} ->
+        IO.puts("✗ Failed to analyze sentiment: #{inspect(reason)}")
+    end
+
+    result
+  end
+
   def test_stream_audio() do
     Membrane.Pipeline.start_link(MoodBot.MembraneAudioStreamingTest, [])
   end
@@ -457,6 +481,9 @@ defmodule MoodBot.IExHelpers do
 
     ✨ Language Model Commands:
       chat("Hello, how are you?")          - Chat with the language model
+
+    🧠 Sentiment Analysis Commands:
+      analyze_sentiment("Das ist toll!")   - Analyze German text sentiment
 
     🎤 Voice Commands:
       record_start()                       - Start recording audio

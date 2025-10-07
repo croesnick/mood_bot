@@ -566,6 +566,33 @@ curl -X POST "https://${AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitives
   --output test.wav
 ```
 
+## Sentiment Analysis
+
+Test, not guess:
+
+```elixir
+evaluate = fn text ->
+  IO.inspect("Sentiment analysis for: #{text}")
+  MoodBot.IExHelpers.analyze_sentiment(text)
+end
+
+[
+  "Heute ist ja Sonntag!",
+  "Ich freue mich so sehr!",
+  "Das ist fantastisch!",
+  "Du bist lustig",
+  "Ich habe heute nicht gut geschlafen",
+  "Mir ist ein bisschen langweilig",
+  "Ich hasse das",
+  "Hast du Ideen, was ich heute machen könnte?",
+  "Ja, das stimmt",
+  "Dinosaurier waren Echsen!",
+  "Hä, was soll das?",
+  "Das verstehe ich nicht?!"
+]
+|> Enum.each(&evaluate.(&1))
+```
+
 ## Assorted
 
 - [UTM network setup considerations](https://github.com/utmapp/UTM/discussions/3574)

@@ -47,6 +47,8 @@ defmodule MoodBot.Application do
         # Start language model subsystem
         {MoodBot.LanguageModels.Supervisor,
          models_config: Application.get_env(:mood_bot, :language_models, [])},
+        # Start German sentiment analysis
+        {MoodBot.SentimentAnalysis, []},
         # Start Whisper serving for speech-to-text
         {MoodBot.STT.Whisper, []},
         # Start STT manager for recording coordination
@@ -64,6 +66,8 @@ defmodule MoodBot.Application do
         # Start language model subsystem
         {MoodBot.LanguageModels.Supervisor,
          models_config: Application.get_env(:mood_bot, :language_models, [])},
+        # Start German sentiment analysis
+        {MoodBot.SentimentAnalysis, []},
         # Start Whisper serving for speech-to-text
         {MoodBot.STT.Whisper, []},
         # Start STT manager for recording coordination

@@ -339,8 +339,6 @@ But I have not found yet if exla with [`XLA_TARGET=tpu`](https://github.com/elix
 ## References
 
 - [LLMs like DeepSeek on Raspberry Pi 5](https://buyzero.de/blogs/news/deepseek-on-raspberry-pi-5-16gb-a-step-by-step-guide-to-local-llm-inference)
-- [How to Do Sentiment Analysis With Large Language Models](https://blog.jetbrains.com/pycharm/2024/12/how-to-do-sentiment-analysis-with-large-language-models/)
-- [Sentiment analysis using BERT models](https://medium.com/@alexrodriguesj/sentiment-analysis-with-bert-a-comprehensive-guide-6d4d091eb6bb)
 - [An overview on SLMs - Small Language Models](https://huggingface.co/blog/jjokah/small-language-model)
 - [How Well Do LLMs Perform on a Raspberry Pi 5?](https://www.stratosphereips.org/blog/2025/6/5/how-well-do-llms-perform-on-a-raspberry-pi-5) -- very well-done overview!
 - [AN LLM FOR THE RASPBERRY PI](https://hackaday.com/2025/05/10/an-llm-for-the-raspberry-pi/)
