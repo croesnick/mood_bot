@@ -902,6 +902,48 @@ Logger.configure(level: :debug)
 config :logger, level: :debug
 ```
 
+## Interactive Pipeline (MoodBot.Controller)
+
+MoodBot includes an integrated controller that orchestrates the complete interaction pipeline:
+
+**STT** → **Sentiment Analysis** → **Display Mood** → **LLM Response** → **TTS**
+
+### Pipeline Flow
+
+1. **Button press** → starts recording
+2. **Second press** (or 60s timeout) → stops recording & processes
+3. **Transcription** → German speech-to-text via Whisper
+4. **Sentiment Analysis** → determines mood from transcript
+5. **Mood Display** → shows robot face on e-ink screen
+6. **LLM Generation** → generates child-friendly German response
+7. **TTS Output** → speaks response via Azure TTS
+
+### API
+
+```elixir
+# Simulate button press (start recording)
+MoodBot.Controller.handle_button_press()
+
+# Second press (stop & process)
+MoodBot.Controller.handle_button_press()
+
+# Check status
+MoodBot.Controller.status()
+```
+
+### Configuration
+
+- **System Prompt**: Configured in `MoodBot.Controller` module attribute
+- **Target Audience**: Children aged 6-12
+- **Language**: German
+- **Recording Timeout**: 60 seconds
+
+### Future Enhancements
+
+- GPIO button integration (see [`.claude/plans/button-gpio.md`](.claude/plans/button-gpio.md))
+- Conversation history persistence
+- Interrupt handling during processing
+
 ## Contributing
 
 1. Fork the repository

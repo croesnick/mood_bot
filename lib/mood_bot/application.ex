@@ -52,7 +52,9 @@ defmodule MoodBot.Application do
         # Start Whisper serving for speech-to-text
         {MoodBot.STT.Whisper, []},
         # Start STT manager for recording coordination
-        {MoodBot.STT.Manager, []}
+        {MoodBot.STT.Manager, []},
+        # Start main controller
+        {MoodBot.Controller, []}
       ]
     end
   else
@@ -71,7 +73,9 @@ defmodule MoodBot.Application do
         # Start Whisper serving for speech-to-text
         {MoodBot.STT.Whisper, []},
         # Start STT manager for recording coordination
-        {MoodBot.STT.Manager, []}
+        {MoodBot.STT.Manager, []},
+        # Start main controller
+        {MoodBot.Controller, []}
       ]
     end
   end

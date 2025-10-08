@@ -593,6 +593,31 @@ end
 |> Enum.each(&evaluate.(&1))
 ```
 
+## Claude workflow
+
+- Write a brief plan markdown file
+- Discuss the plan file within Claude
+- Let CC compact the discussion and write the plan + architectural decisions to the markdown file
+- Instruct CC to take baby-steps when implementing, making it review-friendly, just one aspect at a time:
+  
+  ```plaintext
+  This is way, way too much stuff at once to digest. Start super simple. We want to move in baby steps from one moving implementation to the next.
+  ```
+
+- Once everything is in place, let CC review it's creation:
+
+  ```plaintext
+  Act like a system architect and Elixir professional. Review file @lib/mood_bot/controller.ex and, where appropriate, make improvements. Don't do the big refactorings, though, unless confirmed by me.
+  ```
+
+- Go over each change. Stage what's fine. Select what needs refinement, and tell CC what it needs to do:
+
+  ```plaintext
+  `display_mood/1` IMHO needs to be refined. The `mood_file_path/1` already provides a file fallback if the sentiment could not be found. Don't thing we need the redundant else case?
+  ```
+
+  Sample: ![CC incremental review](./talks/assets/claude-code-incremental-review.png)
+
 ## Assorted
 
 - [UTM network setup considerations](https://github.com/utmapp/UTM/discussions/3574)
