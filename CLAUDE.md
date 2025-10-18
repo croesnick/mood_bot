@@ -30,6 +30,350 @@ The application uses a target-conditional architecture where different child pro
 - Remove redundant information while keeping essential details and helpful examples
 - Make every piece of information relevant to the reader
 
+## Slidev Presentation Guide
+
+This project uses Slidev with the TNG theme for presentations. Reference: `talks/moodbot-code-beam-europe-2025/`
+
+### Frontmatter Configuration
+
+**Global Configuration** (first slide):
+```yaml
+---
+theme: "@tngtech/slidev-theme-tng"
+themeConfig:
+  authors:
+    - name: Name
+      email: email@example.com
+      position: Title
+      link: https://example.com
+mdc: true
+favicon: /favicon.svg
+title: "Presentation Title"
+subheading: "Subtitle"
+hideInToc: true
+---
+```
+
+**Per-Slide Properties**:
+- `layout:` - Layout type (see below)
+- `title:` - Slide title
+- `subheading:` - Subtitle
+- `level:` - Heading level (1-6)
+- `hideInToc: true` - Exclude from table of contents
+- `showLogo: false` - Hide TNG logo
+- `showFooter: false` - Hide footer
+- `image:` - Image path (for image-right layout)
+- `transition:` - fade-out, slide-up, etc.
+- `preload: false` - Disable preloading
+- `routeAlias:` - Custom route name
+- `src:` - Include external markdown file
+
+### TNG Layouts
+
+**Default Layout** - Standard content slide
+```markdown
+---
+title: "Title"
+---
+Content here
+```
+
+**section** - Section divider with large heading
+```markdown
+---
+layout: section
+sectionNumber: 2
+---
+# Section Title
+```
+
+**two-cols** - Two columns side by side
+```markdown
+---
+layout: two-cols
+right:
+  class: bg-tng
+---
+Left content
+
+::right::
+Right content
+```
+
+**three-cols** - Three columns
+```markdown
+---
+layout: three-cols
+middle:
+  class: p-16
+right:
+  image: /img/photo.png
+---
+Left content
+
+::middle::
+Middle content
+```
+
+**image-right** - Content left, image right
+```markdown
+---
+layout: image-right
+image: /path/to/image.png
+---
+Content here
+```
+
+**quote** - Quote with attribution
+```markdown
+---
+layout: quote
+---
+The quote text here
+
+::quotee::
+Attribution
+```
+
+**statement** - Emphasized statement
+```markdown
+---
+layout: statement
+---
+Important statement
+```
+
+**fact** - Single fact or number emphasis
+```markdown
+---
+layout: fact
+---
+42
+```
+
+**ending** - Thank you slide
+```markdown
+---
+layout: ending
+title: "Thank you"
+subheading: "Questions?"
+---
+```
+
+**speaker** - Speaker info (auto-populated from themeConfig)
+```markdown
+---
+layout: speaker
+---
+```
+
+### TNG Components
+
+**AutoFitImg** - Auto-sizing images
+```html
+<AutoFitImg src="/path/to/image.png" alt="Description" />
+```
+
+**Toc** - Table of contents
+```html
+<Toc maxDepth="1" />
+```
+
+**VCenter** - Vertically center content
+```html
+<VCenter>
+  Content here
+</VCenter>
+```
+
+**Bubble** - Icon with circular background
+```html
+<Bubble><tng-lightbulb /></Bubble>
+```
+
+**Link** - Internal slide links
+```html
+<Link to="/route-alias">Link text</Link>
+```
+
+### TNG Icons
+
+Available icons for use in `<Bubble>` or standalone:
+- `<tng-lightbulb />` - Lightbulb
+- `<tng-rocket />` - Rocket
+- `<tng-page />` - Page
+- `<tng-code />` - Code
+- `<tng-comments-round />` - Comments
+- `<tng-circle-minus-solid />` - Circle minus
+
+### Animations
+
+**Click animations**:
+```html
+<img v-click src="..." />
+<p v-after>Appears after previous v-click</p>
+<div v-click="3">Appears on click 3</div>
+```
+
+**Motion animations**:
+```html
+<div
+  v-motion
+  :initial="{ x: -80, opacity: 0 }"
+  :enter="{ x: 0, opacity: 1, transition: { delay: 2000 } }">
+  Content
+</div>
+```
+
+**Arrow component**:
+```html
+<arrow v-click="3" x1="400" y1="420" x2="230" y2="330"
+       color="#564" width="3" arrowSize="1" />
+```
+
+### Code Highlighting
+
+**Basic syntax highlighting**:
+````markdown
+```ts
+code here
+```
+````
+
+**Line highlighting with steps**:
+````markdown
+```ts {all|2|1-6|9|all}
+line 1
+line 2
+...
+```
+````
+
+### Diagrams
+
+**Mermaid**:
+````markdown
+```mermaid {scale: 0.5, theme: 'neutral'}
+graph TD
+A --> B
+```
+````
+
+**PlantUML**:
+````markdown
+```plantuml {scale: 0.7}
+@startuml
+...
+@enduml
+```
+````
+
+### LaTeX
+
+**Inline**: `$\sqrt{3x-1}+(1+x)^2$`
+
+**Block**:
+```markdown
+$$
+\nabla \times \vec{\mathbf{B}} = \frac{4\pi}{c}\vec{\mathbf{j}}
+$$
+```
+
+### Layout & Styling
+
+**Grid layouts**:
+```html
+<div grid="~ cols-2 gap-4">
+  <div>Column 1</div>
+  <div>Column 2</div>
+</div>
+
+<!-- Alternative: -->
+<div class="grid grid-cols-3 gap-10">
+  ...
+</div>
+```
+
+**Flex layouts**:
+```html
+<div class="flex items-center justify-center gap-6">
+  <img src="..." class="h-20 w-auto" />
+  <span class="text-4xl">→</span>
+  <img src="..." class="h-20 w-auto" />
+</div>
+```
+
+**TailwindCSS classes** - Available for all styling needs
+
+**Per-slide styles**:
+```html
+<style>
+h1 {
+  color: #2B90B6;
+}
+</style>
+```
+
+**Per-slide Vue script**:
+```html
+<script setup lang="ts">
+const data = { ... }
+</script>
+```
+
+### Special Features
+
+**Presenter notes** - HTML comments at slide end:
+```markdown
+---
+slide content
+---
+
+<!--
+These notes appear in presenter mode.
+Supports **markdown** formatting.
+-->
+```
+
+**Built-in components**:
+```html
+<Tweet id="1390115482657726468" scale="0.65" />
+<Youtube id="video-id" />
+<kbd>Ctrl</kbd> + <kbd>C</kbd>
+```
+
+**Footnotes**:
+```markdown
+Some text[^1]
+
+[^1]: Footnote definition
+```
+
+### Common Patterns
+
+**Horizontal logo layout with arrows**:
+```html
+<div class="flex items-center justify-center gap-6 mt-8">
+  <img src="/img/logo1.png" alt="Logo 1" class="h-20 w-auto" />
+  <span class="text-4xl text-gray-400">→</span>
+  <img src="/img/logo2.png" alt="Logo 2" class="h-20 w-auto" />
+</div>
+```
+
+**Content with icon bullets**:
+```html
+<VCenter>
+  * <Bubble><tng-lightbulb /></Bubble> Point 1
+  * <Bubble><tng-rocket /></Bubble> Point 2
+</VCenter>
+```
+
+### Development Commands
+
+**Start dev server**: `npm run dev`
+**Export to PDF**: `npm run export`
+**CLI help**: `npx slidev --help`
+
 ## Development Commands
 
 We use a build VM to cross-build the firmware from Apple Silicon (macOS) for arm64 (Raspberry Pi). Therefore, all mix commands (`mix compile`, `mix firmware`, ...) should be run inside the VM by means of the run-in-vm script:

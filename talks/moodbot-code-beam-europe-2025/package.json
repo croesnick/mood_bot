@@ -1,0 +1,26 @@
+{
+  "name": "moodbot-code-beam-europe-2025",
+  "private": true,
+  "scripts": {
+    "build": "slidev build",
+    "dev": "slidev --open",
+    "template": "slidev slides-template.md --open --port 3031",
+    "export": "slidev export",
+    "publish": "slidev build && slidev-tng-publish publish",
+    "unpublish": "slidev-tng-publish unpublish"
+  },
+  "dependencies": {
+    "@slidev/cli": "^51.0.0",
+    "@tngtech/slidev-theme-tng": "^0.5.2 || ^0.6.0"
+  },
+  "devDependencies": {
+    "playwright-chromium": "^1.35.1",
+    "@tngtech/slidev-tng-publish": "^0.1.0"
+  },
+  "publicationSettings": {
+    "name": null,
+    "region": "eu-west-1",
+    "username": null,
+    "password": null
+  }
+}

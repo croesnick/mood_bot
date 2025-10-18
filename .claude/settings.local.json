@@ -20,7 +20,9 @@
       "Bash(mix process_image:*)",
       "WebFetch(domain:hexdocs.pm)",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__get-library-docs"
+      "mcp__context7__get-library-docs",
+      "WebFetch(domain:sli.dev)",
+      "WebFetch(domain:docs.slides.tngtech.com)"
     ],
     "deny": []
   },

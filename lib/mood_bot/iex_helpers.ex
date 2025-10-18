@@ -210,10 +210,6 @@ defmodule MoodBot.IExHelpers do
     result
   end
 
-  def test_stream_audio() do
-    Membrane.Pipeline.start_link(MoodBot.MembraneAudioStreamingTest, [])
-  end
-
   @doc "Start recording audio (button press simulation)"
   def record_start do
     result = MoodBot.STT.Manager.start_recording()

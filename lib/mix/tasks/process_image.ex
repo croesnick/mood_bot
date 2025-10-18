@@ -155,13 +155,9 @@ defmodule Mix.Tasks.ProcessImage do
     end
   end
 
-  defp convert_png_to_pbm(png_path, pbm_path) do
-    convert_png_to_pbm_direct(png_path, pbm_path)
-  end
-
   # Loads PNG, centers it on 128x296 canvas, extracts pixel data, converts to ASCII 0s and 1s, saves as P1 PBM.
   # Simple threshold: pixel < 128 = '0' (black), pixel >= 128 = '1' (white).
-  defp convert_png_to_pbm_direct(png_path, pbm_path) do
+  defp convert_png_to_pbm(png_path, pbm_path) do
     with {:ok, image} <- Image.open(png_path),
          {:ok, centered_image} <- center_image_on_canvas(image),
          {width, height, _bands} <- Image.shape(centered_image),
