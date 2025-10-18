@@ -136,6 +136,11 @@ config :mood_bot, MoodBot.Display.Driver,
 config :nx, default_backend: EXLA.Backend
 config :nx, :default_defn_options, compiler: EXLA
 
+# Button GPIO configuration
+config :mood_bot, MoodBot.Button,
+  gpio_pin: {"gpiochip0", 27},
+  debounce_ms: 50
+
 # Language models configuration
 config :mood_bot, :language_models,
   llama_3_2_1b: [
