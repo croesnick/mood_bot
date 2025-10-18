@@ -1,7 +1,5 @@
 # Loose collection of learnings
 
-- After flasing the sd card and booting the pi with it, the pi still does not appear in my Wifi. How to debug that?
-
 ## Nerves Conditional Compilation Patterns
 
 ### Problem: VintageNet only available on target, not host
@@ -518,12 +516,6 @@ commands "gcc --version" and / or "make --version". If these programs
 are not installed, you will be prompted to install them.
 ```
 
-## Playing audio via Nerves
-
-- Starter talk: <https://www.youtube.com/watch?v=2IastDZCuFs>
-- Membrane: <https://underjord.io/membrane-media-processing-and-liveview.html>
-- Elixir for multimedia: <https://blog.swmansion.com/elixir-for-multimedia-a-practical-guide-for-developers-169adb0eb523>
-
 ## Random bits and pieces
 
 - <https://wiki.alopex.li/NervesNotes#onboard-storage>
@@ -533,6 +525,12 @@ are not installed, you will be prompted to install them.
 Claude insisted on using `Image.compose/3`, while `Image.embed/4` would have been the right choice.
 
 ## Playing Audio
+
+Collection of links:
+
+- Starter talk: <https://www.youtube.com/watch?v=2IastDZCuFs>
+- Membrane: <https://underjord.io/membrane-media-processing-and-liveview.html>
+- Elixir for multimedia: <https://blog.swmansion.com/elixir-for-multimedia-a-practical-guide-for-developers-169adb0eb523>
 
 Nerves for RPi3 comes with ALSA audio support. And a short test confirmed that it's working:
 
