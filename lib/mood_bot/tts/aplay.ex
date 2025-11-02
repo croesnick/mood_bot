@@ -1,4 +1,6 @@
 defmodule MoodBot.TTS.Aplay do
+  require Logger
+
   @doc """
   Stream audio data from a data source function to aplay.
   """
@@ -14,16 +16,24 @@ defmodule MoodBot.TTS.Aplay do
 
   @doc """
   Ensure the audio system is ready for playback by setting volume.
+
+  Attempts to set PCM volume to 100% using amixer. If this fails (e.g., on HDMI audio),
+  it logs a warning but allows playback to continue. Volume control is optional.
   """
-  @spec ensure_audio_ready() :: {:ok, :ready} | {:error, String.t()}
+  @spec ensure_audio_ready() :: {:ok, :ready}
   def ensure_audio_ready do
     case System.cmd("amixer", ["set", "PCM", "100%"], stderr_to_stdout: true) do
       {_output, 0} ->
-        {:ok, :ready}
+        Logger.debug("TTS.Aplay: Volume set to 100%")
 
       {error_output, _exit_code} ->
-        {:error, "Failed to configure audio: #{error_output}"}
+        Logger.warning(
+          "TTS.Aplay: Could not set volume (HDMI audio may not support amixer): #{error_output}"
+        )
     end
+
+    # Always return success - volume control is optional
+    {:ok, :ready}
   end
 
   # Open aplay as an Erlang port that accepts binary data on stdin
