@@ -83,7 +83,7 @@ Add to `config/target.exs`:
 ```elixir
 # Button GPIO configuration
 config :mood_bot, MoodBot.Button,
-  gpio_pin: {"gpiochip0", 27},  # GPIO 27, Physical Pin 13
+  button_pin: {"gpiochip0", 27},  # GPIO 27, Physical Pin 13
   debounce_ms: 50
 ```
 

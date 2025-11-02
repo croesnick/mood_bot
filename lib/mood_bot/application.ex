@@ -74,10 +74,12 @@ defmodule MoodBot.Application do
         {MoodBot.STT.Whisper, []},
         # Start STT manager for recording coordination
         {MoodBot.STT.Manager, []},
-        # Start main controller
-        {MoodBot.Controller, []},
+        # Start LED indicator (target only)
+        {MoodBot.LED, []},
         # Start GPIO button handler (target only)
-        {MoodBot.Button, []}
+        {MoodBot.Button, []},
+        # Start main controller
+        {MoodBot.Controller, []}
       ]
     end
   end

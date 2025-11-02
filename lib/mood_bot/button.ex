@@ -3,7 +3,8 @@ defmodule MoodBot.Button do
   GPIO button input handler for MoodBot.
 
   Monitors a physical button connected to GPIO 27 (Physical Pin 13) and triggers
-  the Controller when pressed. Includes software debouncing to filter mechanical bounce.
+  the Controller when pressed. Includes software debouncing (50ms) to filter
+  mechanical bounce and cooldown period (500ms) to prevent rapid successive presses.
 
   ## Hardware Setup
 
@@ -18,8 +19,12 @@ defmodule MoodBot.Button do
   @type button_state :: %{
           gpio_ref: reference() | nil,
           debounce_ms: non_neg_integer(),
-          debounce_timer_ref: reference() | nil
+          debounce_timer_ref: reference() | nil,
+          last_press_time: integer() | nil
         }
+
+  # Cooldown period to prevent bounce on button release from triggering new press
+  @cooldown_ms 500
 
   ## Client API
 
@@ -40,23 +45,24 @@ defmodule MoodBot.Button do
     Logger.info("Button: Initializing GPIO button handler")
 
     config = Application.get_env(:mood_bot, __MODULE__, [])
-    gpio_pin = Keyword.fetch!(config, :gpio_pin)
+    button_pin = Keyword.fetch!(config, :button_pin)
     debounce_ms = Keyword.fetch!(config, :debounce_ms)
 
-    case initialize_gpio(gpio_pin) do
+    case initialize_gpio(button_pin) do
       {:ok, gpio_ref} ->
-        Logger.info("Button: GPIO initialized successfully on pin #{inspect(gpio_pin)}")
+        Logger.info("Button: GPIO initialized successfully on pin #{inspect(button_pin)}")
 
         state = %{
           gpio_ref: gpio_ref,
           debounce_ms: debounce_ms,
-          debounce_timer_ref: nil
+          debounce_timer_ref: nil,
+          last_press_time: nil
         }
 
         {:ok, state}
 
       {:error, reason} ->
-        Logger.error("Button: Failed to initialize GPIO", error: reason, pin: gpio_pin)
+        Logger.error("Button: Failed to initialize GPIO", error: reason, pin: button_pin)
         # Fail fast - supervisor can decide restart strategy
         {:stop, {:gpio_init_failed, reason}}
     end
@@ -66,8 +72,8 @@ defmodule MoodBot.Button do
 
   @spec initialize_gpio({String.t(), non_neg_integer()}) ::
           {:ok, reference()} | {:error, any()}
-  defp initialize_gpio({chip, pin}) do
-    with {:ok, gpio_ref} <- Circuits.GPIO.open(chip, pin, :input),
+  defp initialize_gpio(gpio_spec) do
+    with {:ok, gpio_ref} <- Circuits.GPIO.open(gpio_spec, :input),
          :ok <- Circuits.GPIO.set_pull_mode(gpio_ref, :pullup),
          :ok <- Circuits.GPIO.set_interrupts(gpio_ref, :falling) do
       {:ok, gpio_ref}
@@ -78,12 +84,19 @@ defmodule MoodBot.Button do
 
   @impl true
   def handle_info({:circuits_gpio, _pin, _timestamp, 0}, %{debounce_timer_ref: nil} = state) do
-    # Falling edge detected - no active debounce, process it
-    Logger.debug("Button: GPIO interrupt - falling edge detected")
-    Logger.debug("Button: Starting debounce timer (#{state.debounce_ms}ms)")
+    # Falling edge detected - no active debounce, check cooldown
+    now = System.monotonic_time(:millisecond)
 
-    timer_ref = Process.send_after(self(), :debounce_complete, state.debounce_ms)
-    {:noreply, %{state | debounce_timer_ref: timer_ref}}
+    if within_cooldown?(state.last_press_time, now) do
+      Logger.debug("Button: GPIO interrupt - ignoring (within cooldown period)")
+      {:noreply, state}
+    else
+      Logger.debug("Button: GPIO interrupt - falling edge detected")
+      Logger.debug("Button: Starting debounce timer (#{state.debounce_ms}ms)")
+
+      timer_ref = Process.send_after(self(), :debounce_complete, state.debounce_ms)
+      {:noreply, %{state | debounce_timer_ref: timer_ref}}
+    end
   end
 
   def handle_info({:circuits_gpio, _pin, _timestamp, 0}, state) do
@@ -110,7 +123,18 @@ defmodule MoodBot.Button do
         Logger.warning("Button: Controller rejected button press", error: reason)
     end
 
-    # Clear debounce timer
-    {:noreply, %{state | debounce_timer_ref: nil}}
+    # Update last press time and clear debounce timer
+    # Note: Cooldown starts after Controller call completes (which may be synchronous/blocking)
+    now = System.monotonic_time(:millisecond)
+    {:noreply, %{state | debounce_timer_ref: nil, last_press_time: now}}
+  end
+
+  ## Helper Functions
+
+  @spec within_cooldown?(integer() | nil, integer()) :: boolean()
+  defp within_cooldown?(nil, _now), do: false
+
+  defp within_cooldown?(last_press_time, now) do
+    now - last_press_time < @cooldown_ms
   end
 end

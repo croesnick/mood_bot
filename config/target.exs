@@ -138,7 +138,8 @@ config :nx, :default_defn_options, compiler: EXLA
 
 # Button GPIO configuration
 config :mood_bot, MoodBot.Button,
-  gpio_pin: {"gpiochip0", 27},
+  button_pin: {"gpiochip0", 5},
+  led_pin: {"gpiochip0", 6},
   debounce_ms: 50
 
 # Language models configuration
