@@ -31,7 +31,7 @@ defmodule MoodBot.Controller do
   @recording_timeout_ms 60_000
 
   @type pipeline_state :: :idle | :recording | :processing | :responding | :error
-  @type sentiment :: :happy | :affirmation | :skeptic | :surprised | :crying | :error
+  @type sentiment :: :happy | :affirmation | :skeptic | :surprised | :crying | :angry | :error
 
   @type conversation_message :: %{
           role: :user | :assistant,
@@ -123,22 +123,13 @@ defmodule MoodBot.Controller do
   defp display_mood(sentiment) do
     Logger.info("Controller: Displaying mood: #{sentiment}")
 
-    mood_file = mood_file_path(sentiment)
+    mood_file = MoodBot.Moods.file_path(sentiment)
 
     with {:ok, image_data} <- MoodBot.Images.Bitmap.load_pbm(mood_file),
          :ok <- MoodBot.Display.display_image(image_data) do
       :ok
     end
   end
-
-  @spec mood_file_path(sentiment()) :: String.t()
-  defp mood_file_path(:happy), do: "assets/moods/robot-face-happy.pbm"
-  defp mood_file_path(:affirmation), do: "assets/moods/robot-face-affirmation.pbm"
-  defp mood_file_path(:skeptic), do: "assets/moods/robot-face-skeptic.pbm"
-  defp mood_file_path(:surprised), do: "assets/moods/robot-face-surprised.pbm"
-  defp mood_file_path(:crying), do: "assets/moods/robot-face-crying.pbm"
-  defp mood_file_path(:error), do: "assets/moods/robot-face-error.pbm"
-  defp mood_file_path(_), do: "assets/moods/robot-face-happy.pbm"
 
   defp generate_response(state, user_message) do
     # Get first configured language model

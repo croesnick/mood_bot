@@ -11,7 +11,8 @@ defmodule MoodBot.SentimentAnalysis do
   - `:affirmation` - Agreeable, supportive, neutral (approval, caring, gratitude, admiration, pride, relief, neutral, curiosity, realization)
   - `:skeptic` - Doubtful, irritated (annoyance, disappointment, disapproval, embarrassment)
   - `:surprised` - Unexpected, confused (surprise, confusion)
-  - `:crying` - Sad, negative (sadness, grief, remorse, fear, nervousness, anger, disgust, desire)
+  - `:angry` - Angry, disgusted (anger, disgust)
+  - `:crying` - Sad, negative (sadness, grief, remorse, fear, nervousness, desire)
   """
 
   use GenServer
@@ -21,7 +22,7 @@ defmodule MoodBot.SentimentAnalysis do
   @serving_name __MODULE__.Serving
 
   @typedoc "MoodBot sentiment categories"
-  @type sentiment :: :happy | :affirmation | :skeptic | :surprised | :crying
+  @type sentiment :: :happy | :affirmation | :skeptic | :surprised | :angry | :crying
 
   # Client API
 
@@ -131,7 +132,11 @@ defmodule MoodBot.SentimentAnalysis do
         label when label in ["surprise", "confusion"] ->
           :surprised
 
-        # Crying/sad emotions: sadness, grief, remorse, fear, nervousness, anger, disgust, desire
+        # Angry/disgusted emotions: anger, disgust
+        label when label in ["anger", "disgust"] ->
+          :angry
+
+        # Crying/sad emotions: sadness, grief, remorse, fear, nervousness, desire
         label
         when label in [
                "sadness",
@@ -139,8 +144,6 @@ defmodule MoodBot.SentimentAnalysis do
                "remorse",
                "fear",
                "nervousness",
-               "anger",
-               "disgust",
                "desire"
              ] ->
           :crying

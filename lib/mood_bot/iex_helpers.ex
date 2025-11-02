@@ -67,10 +67,17 @@ defmodule MoodBot.IExHelpers do
     result
   end
 
-  @doc "Display a mood on the e-ink display (:happy, :sad, :neutral, :angry, :surprised)."
+  @doc "Display a mood on the e-ink display (:happy, :affirmation, :skeptic, :surprised, :angry, :crying)."
   @spec display_mood(atom()) :: :ok | {:error, binary()}
-  def display_mood(mood) when mood in [:happy, :sad, :neutral, :angry, :surprised] do
-    result = MoodBot.Display.show_mood(mood)
+  def display_mood(mood)
+      when mood in [:happy, :affirmation, :skeptic, :surprised, :angry, :crying] do
+    mood_file = MoodBot.Moods.file_path(mood)
+
+    result =
+      with {:ok, image_data} <- MoodBot.Images.Bitmap.load_pbm(mood_file),
+           :ok <- MoodBot.Display.display_image(image_data) do
+        :ok
+      end
 
     case result do
       :ok ->
@@ -91,8 +98,7 @@ defmodule MoodBot.IExHelpers do
 
     # Find some sample PBM files to use
     sample_images = [
-      Path.join(:code.priv_dir(:mood_bot), "assets/demo/peace.pbm"),
-      Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-happy.pbm")
+      Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-approval.pbm")
     ]
 
     IO.puts("🖼️  Starting comprehensive display demo...")
@@ -225,6 +231,7 @@ defmodule MoodBot.IExHelpers do
             :affirmation -> "👍"
             :skeptic -> "🤨"
             :surprised -> "😮"
+            :angry -> "😠"
             :crying -> "😢"
           end
 
@@ -494,7 +501,7 @@ defmodule MoodBot.IExHelpers do
     📺 Display Commands:
       display_init()                       - Initialize the display
       display_demo()                       - Comprehensive demo (black → white → elixir logo → bitmap samples → clear)
-      display_mood(:happy)                 - Show mood (:happy, :sad, :neutral, :angry, :surprised)
+      display_mood(:happy)                 - Show mood (:happy, :affirmation, :skeptic, :surprised, :angry, :crying)
       display_clear()                      - Clear the display to white
       display_fill_black()                 - Fill the display with black
       display_status()                     - Show display status
