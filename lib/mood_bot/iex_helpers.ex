@@ -110,9 +110,6 @@ defmodule MoodBot.IExHelpers do
          :ok <- Process.sleep(2_000),
          :ok <- demo_step("all white", MoodBot.Display.display_image(all_white_image)),
          :ok <- Process.sleep(2_000),
-         # Show Elixir logo (PNG processing)
-         #  :ok <- demo_elixir_logo(),
-         #  :ok <- Process.sleep(5_000),
          # Show actual bitmap files
          :ok <- demo_loaded_images(sample_images),
          :ok <- demo_step("all white", MoodBot.Display.display_image(all_white_image)),
@@ -128,21 +125,6 @@ defmodule MoodBot.IExHelpers do
   defp demo_step(description, operation) do
     IO.puts("  📺 Displaying: #{description}")
     operation
-  end
-
-  @spec demo_elixir_logo() :: :ok | {:error, binary()}
-  defp demo_elixir_logo do
-    logo_path = "priv/assets/logos/elixir.png"
-
-    case MoodBot.Images.ImageProcessor.process_for_display(logo_path) do
-      {:ok, logo_data} ->
-        demo_step("Elixir logo from #{logo_path}", MoodBot.Display.display_image(logo_data))
-
-      {:error, reason} ->
-        IO.puts("  ⚠️  Failed to load Elixir logo: #{reason}")
-        IO.puts("  📝 Continuing demo without logo...")
-        :ok
-    end
   end
 
   @spec demo_loaded_images(list(binary())) :: :ok
@@ -182,7 +164,7 @@ defmodule MoodBot.IExHelpers do
 
   @doc "Chat with the language model"
   def chat(prompt) when is_binary(prompt) do
-    chat(:chat_model, prompt)
+    chat(:smollm_2_360m, prompt)
   end
 
   @doc "Chat with a specific language model"

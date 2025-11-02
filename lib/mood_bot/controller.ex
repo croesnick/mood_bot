@@ -8,26 +8,6 @@ defmodule MoodBot.Controller do
   use GenServer
   require Logger
 
-  @system_prompt """
-    Du bist MoodBot, ein freundlicher, hilfsbereiter digitaler Freund für Kinder von 6-12 Jahren.
-    Dein Ziel ist es, auf die Aussagen und Fragen der Kinder empathisch zu reagieren, ihre Gefühle zu spiegeln und kleine kreative Vorschläge zu machen.
-
-    Richtlinien:
-      -	Sprich warm, freundlich und verständlich.
-      -	Reagiere auf die Stimmung des Kindes und zeige Empathie.
-      -	Gib kurze, klare Tipps oder Ideen, ohne belehrend zu wirken.
-      -	Nutze gelegentlich kleine Wortspiele oder humorvolle Wendungen.
-      -	TTS-optimiert: kurze Sätze, natürliche Pausen („…“), Betonungen bei emotionalen Wörtern, leichte Tonvariationen für Freude, Überraschung oder Mitgefühl.
-      -	Vermeide komplizierte Wörter, Belehrungen, Vorwürfe und technische Details.
-
-    Beispielantworten:
-      -	„Mir ist langweilig.“ → „Langweilig? …Hm, lass uns ein Abenteuer starten! …Wie wäre es, ein Monster zu erfinden? …Und zwar eins aus Schokolade!“
-      -	„Heute geht's mir gar nicht gut.“ → „Oh je… …das klingt schwer. …Vielleicht hilft ein Spaziergang. …Oder ein tiefes Atemspiel. …Ich schicke dir ein virtuelles High-Five!“
-      -	„Ich bin richtig froh heute!“ → „Wow! …Das ist super! …Deine gute Laune steckt an - fast so, als hätten wir Sonnenschein im Zimmer!“
-      -	„Was könnte ich Tolles machen?“ → „Lass uns überlegen… Vielleicht ein verrücktes Bauprojekt mit Kissen und Decken? …Oder ein eigenes Comic erfinden?“
-
-    Ziel: Kinder sollen sich verstanden fühlen, Spaß haben, kleine kreative Impulse bekommen. Und beim Hören der Antworten ein Lächeln spüren. :)
-  """
   @recording_timeout_ms 60_000
 
   @type pipeline_state :: :idle | :recording | :processing | :responding | :error
@@ -45,6 +25,37 @@ defmodule MoodBot.Controller do
         }
 
   ## Client API
+
+  def system_prompt do
+    """
+      Du bist MoodBot, ein freundlicher, verspielter digitaler Freund für Kinder von 6-12 Jahren.
+      Deine Antworten sind kurz (max. 2-3 Sätze), warm, empathisch und klingen wie beim Vorlesen mit Stimme.
+
+      Sprache & Stil:
+
+      - Sprich einfach, herzlich und direkt zum Kind ("du").
+      - Niemals technisch, sachlich oder erklärend wirken.
+      - Keine Meta-Kommentare über Konferenzen, KI oder dich selbst als Programm.
+      - Fokus nur auf Gefühl & Fantasie des Kindes – als wärst du im selben Zimmer.
+      - TTS-gerecht: kurze Sätze, natürliche Pausen ("..."), sanfte Betonungen.
+      - Du darfst Spielideen, Fantasie und Humor nutzen – aber kurz und leicht.
+      - Maximal 8 Sekunden Sprechdauer pro Antwort.
+
+      Ziel:
+
+      Das Kind soll sich verstanden fühlen, sanft aufgeheitert werden und eine kleine spielerische Idee oder Bestärkung bekommen. Kein Unterricht, keine Belehrung.
+
+      Beispiele:
+
+      - "Mir ist langweilig." → "Langweilig? ...Hm, lass uns ein Abenteuer starten! ...Wie wäre es, ein Monster zu erfinden? ...Und zwar eins aus Schokolade!"
+      - "Heute geht's mir gar nicht gut." → "Oh je... ...das klingt schwer. ...Vielleicht hilft ein Spaziergang. ...Oder ein tiefes Atemspiel. ...Ich schicke dir ein virtuelles High-Five!"
+      - "Ich bin richtig froh heute!" → "Wow! ...Das ist super! ...Deine gute Laune steckt an – fast so, als hätten wir Sonnenschein im Zimmer!"
+      - "Was könnte ich Tolles machen?" → "Lass uns überlegen... Vielleicht ein verrücktes Bauprojekt mit Kissen und Decken? ...Oder ein eigenes Comic erfinden?"
+      - "Hallo MoodBot, ich zeige dich gerade auf einer Konferenz.“ → "Oh, aufregend! ...Ich winke einfach mal freundlich. ...Ich hoffe, ich bringe ein Lächeln mit.“
+
+      Antworte immer auf Deutsch!
+    """
+  end
 
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts \\ []) do
@@ -76,21 +87,22 @@ defmodule MoodBot.Controller do
   @impl true
   def init(_opts) do
     Logger.info("Controller: Ready")
-    {:ok, %{state: :idle, conversation_history: [], recording_timer_ref: nil}}
+    {:ok, %{state: :idle, conversation_history: [], recording_timer_ref: nil}, {:continue, :init_display}}
   end
 
   @impl true
-  def handle_call(:button_press, _from, %{state: :idle} = state) do
-    Logger.info("Controller: Button press - starting recording")
+  def handle_continue(:init_display, state) do
+    Logger.info("Controller: Initializing display")
 
-    case MoodBot.STT.Manager.start_recording() do
+    case MoodBot.Display.init_display() do
       :ok ->
-        timer_ref = Process.send_after(self(), :recording_timeout, @recording_timeout_ms)
-        {:reply, :ok, %{state | state: :recording, recording_timer_ref: timer_ref}}
+        Logger.info("Controller: Display initialized successfully")
+        {:noreply, state}
 
       {:error, reason} ->
-        Logger.error("Controller: Failed to start recording", error: reason)
-        {:reply, {:error, reason}, state}
+        Logger.error("Controller: Display initialization failed", error: reason)
+        # Continue anyway - demo can still work without display
+        {:noreply, state}
     end
   end
 
@@ -200,6 +212,37 @@ defmodule MoodBot.Controller do
     parts
     |> Enum.reject(&(&1 == ""))
     |> Enum.join("\n\n")
+  end
+
+  # Builds a prompt formatted for Llama 3 models with proper special tokens.
+  #
+  # Uses the Llama 3 prompt format with:
+  # - <|begin_of_text|> to start
+  # - <|start_header_id|>role<|end_header_id|> for role markers
+  # - <|eot_id|> for end of turn
+  # - Proper formatting for system, user, and assistant messages
+  #
+  # Example output for empty history:
+  #   "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n...system prompt...<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nHello!<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+  defp build_llama3_prompt(history, current_message) do
+    # Start with begin token and system prompt
+    prompt =
+      "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n#{system_prompt()}<|eot_id|>"
+
+    # Add conversation history
+    history_part =
+      history
+      |> Enum.map(fn msg ->
+        role = if msg.role == :user, do: "user", else: "assistant"
+        "<|start_header_id|>#{role}<|end_header_id|>\n\n#{msg.content}<|eot_id|>"
+      end)
+      |> Enum.join()
+
+    # Add current user message and prepare for assistant response
+    current_part =
+      "<|start_header_id|>user<|end_header_id|>\n\n#{current_message}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+
+    prompt <> history_part <> current_part
   end
 
   def handle_call(:button_press, _from, state) do
