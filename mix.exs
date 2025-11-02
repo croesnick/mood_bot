@@ -65,11 +65,11 @@ defmodule MoodBot.MixProject do
        override: true,
        targets: [:host]},
       {:membrane_core, "~> 1.2"},
-      {:membrane_ffmpeg_swresample_plugin, "~> 0.20.2"},
+      # {:membrane_ffmpeg_swresample_plugin, "~> 0.20.2"},
       {:membrane_file_plugin, "~> 0.17.2"},
       {:membrane_hackney_plugin, "~> 0.11.0"},
       # {:membrane_mp3_lame_plugin, "~> 0.18.3"},
-      {:membrane_mp3_mad_plugin, "~> 0.18.4"},
+      # {:membrane_mp3_mad_plugin, "~> 0.18.4"},
       {:membrane_portaudio_plugin, "~> 0.19.2"},
 
       # Allow Nerves.Runtime on host to support development, testing and CI.
@@ -87,7 +87,7 @@ defmodule MoodBot.MixProject do
       # version updates, please review their release notes in case
       # changes to your application are needed.
       {:nerves_system_rpi3, "~> 1.31.2", runtime: false, targets: :rpi3},
-      {:nerves_system_rpi5, "~> 0.6.2", runtime: false, targets: :rpi5},
+      {:nerves_system_rpi5, "~> 0.6.2", runtime: false, targets: :rpi5, nerves: [compile: true]},
 
       # Development and testing dependencies
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
@@ -102,7 +102,7 @@ defmodule MoodBot.MixProject do
       # See https://hexdocs.pm/nerves_pack/readme.html#erlang-distribution
       cookie: "#{@app}_cookie",
       include_erts: &Nerves.Release.erts/0,
-      steps: [&Nerves.Release.init/1, :assemble],
+      steps: [&Nerves.Release.init/1, &copy_priv_to_release/1, :assemble],
       strip_beams: Mix.env() == :prod or [keep: ["Docs"]]
     ]
   end
@@ -133,5 +133,29 @@ defmodule MoodBot.MixProject do
           Mix.shell().error("Failed to copy #{file}: #{reason}")
       end
     end
+  end
+
+  # Copy priv/ directory into the release before assembly
+  # This ensures assets are included in the firmware
+  defp copy_priv_to_release(release) do
+    priv_source = "priv"
+    priv_target = Path.join([release.path, "lib", "#{@app}-#{@version}", "priv"])
+
+    if File.exists?(priv_source) do
+      Mix.shell().info("Copying priv/ to release at #{priv_target}")
+      File.mkdir_p!(Path.dirname(priv_target))
+
+      case File.cp_r(priv_source, priv_target) do
+        {:ok, _files} ->
+          Mix.shell().info("Successfully copied priv/ to release")
+
+        {:error, reason, file} ->
+          Mix.shell().error("Failed to copy priv file #{file}: #{reason}")
+      end
+    else
+      Mix.shell().info("No priv/ directory found to copy to release")
+    end
+
+    release
   end
 end
