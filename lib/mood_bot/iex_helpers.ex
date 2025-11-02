@@ -186,6 +186,33 @@ defmodule MoodBot.IExHelpers do
     IO.puts(inspect(result))
   end
 
+  def chat_hello_codebeam_2025 do
+    user_prompt =
+      "Hallo MoodBot! Du bist gerade live auf der Konferenz Code BEAM Europe. Bitte stell dich kurz vor!"
+
+    prompt_llama = """
+      <|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+      #{MoodBot.Controller.system_prompt()}<|eot_id|>
+
+      <|start_header_id|>user<|end_header_id|>
+
+      #{user_prompt}<|eot_id|>
+    """
+
+    chat(:llama_3_2_1b, prompt_llama)
+
+    prompt_smollm = """
+      <|im_start|>system
+      #{MoodBot.Controller.system_prompt()}<|im_end|>
+
+      <|im_start|>user
+      #{user_prompt}<|im_end|>
+    """
+
+    chat(:smollm_2_360m, prompt_smollm)
+  end
+
   @doc "Analyze sentiment of German text"
   def analyze_sentiment(text) when is_binary(text) do
     result = MoodBot.SentimentAnalysis.analyze(text)

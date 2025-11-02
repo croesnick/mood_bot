@@ -146,17 +146,17 @@ config :mood_bot, MoodBot.Button,
 config :mood_bot, :language_models,
   llama_3_2_1b: [
     repo: {:hf, "meta-llama/Llama-3.2-1B-Instruct", auth_token: System.get_env("HF_TOKEN")},
-    generation_config: [max_new_tokens: 1000]
+    generation_config: [max_new_tokens: 250]
   ],
   smollm_2_1_7b: [
     repo: {:hf, "HuggingFaceTB/SmolLM2-1.7B-Instruct", auth_token: System.get_env("HF_TOKEN")},
-    generation_config: [max_new_tokens: 1000]
+    generation_config: [max_new_tokens: 250]
   ],
   smollm_2_360m: [
     repo: {:hf, "HuggingFaceTB/SmolLM2-360M-Instruct", auth_token: System.get_env("HF_TOKEN")},
-    generation_config: [max_new_tokens: 1000]
+    generation_config: [max_new_tokens: 250]
   ],
   smollm_2_135m: [
     repo: {:hf, "HuggingFaceTB/SmolLM2-135M-Instruct", auth_token: System.get_env("HF_TOKEN")},
-    generation_config: [max_new_tokens: 1000]
+    generation_config: [max_new_tokens: 250]
   ]
