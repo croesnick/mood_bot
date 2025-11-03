@@ -7,8 +7,7 @@ themeConfig:
     - name: Carsten Rösnick-Neugebauer
       email: carsten.roesnick-neugebauer@tngtech.com
       position: Senior Software Consultant
-      # TODO [2] Use the link to the repo here
-      link: https://www.linkedin.com/in/croesnickn/
+      link: http://github.com/croesnick/mood_bot/
       picture: /img/me.png
 mdc: true
 favicon: /favicon.svg
@@ -16,7 +15,7 @@ favicon: /favicon.svg
 title: "MoodBot"
 subheading: "Raising a Tiny Robot With Elixir, Nerves, and AI"
 
-background: "mandelbrot-light"
+background: "neuralnet"
 ---
 
 <!--
@@ -43,13 +42,12 @@ title: "Hi, I am Carsten. 👋"
 </div>
 
 <!--
-Hi, I'm Carsten. Back in the days, I studied computer science, and did my PhD in mathematics over 10 years ago.
-And straight from the university I joined TNG, which is a software consultantcy with now over 900 employees, founded 25 years ago in Munich, with a couple of international offices by now.
-
-More importantly for this talk, I am also the father of two boys, 7 and 9 years old.
-And my older son, the nine-year-old a while ago asked me: can we build a robot ourselves? The robot should be able to move and also talk to me!
-
-That didn’t just come out of nowhere.
+- I'm Carsten
+- studied computer science, and did my PhD in mathematics over 10 years ago
+- 2015: joined TNG, a software consultantcy with 900+ employees, founded 25 years ago in Munich, with a couple of international offices by now
+- father of two boys, 7 and 9 years old
+- my older son asked me a while ago: can we build a robot ourselves? The robot should be able to move and also talk to me!
+- That didn’t just come out of nowhere.
 -->
 
 ---
@@ -91,7 +89,7 @@ So the interest in this robot was lost quite quickly.
 -->
 
 ---
-title: "The Spark (2020)"
+title: "The Spark (2022)"
 ---
 
 <div class="flex items-center justify-center">
@@ -124,15 +122,11 @@ title: "The Spark (2024)"
 </div>
 
 <!--
-Last year, we were at the "Deutsches Museum" in Munich.
-
-As part of their robotics exhibition, one of the employees went around of this robotic dog.
-And of course it's bar a lot of interest in all the people standing around including my kids.
-
-This kind of robot is obviously the oppostive of the toy robot and robotic arm we've seen.
-And definitely nothing we could afford or even there to build ourselves.
-
-But the question persisted: Can we build something smart ourselves?
+- 2024: we were at the "Deutsches Museum" in Munich
+- robotics exhibition: employee went around of this unitree robotic dog
+- sparked lot of interest by the visitors around, especially the kids
+- expensive, nothing we could build ourselves
+- But the question persisted: Can we build something smart ourselves?
 -->
 
 ---
@@ -147,12 +141,11 @@ title: But Where To Get Started?
 </div>
 
 <!--
-So, early 2025 we finally discussed building something ourselves.
-
-And as every good robotics project needs a cute avatar, my son started to draw something for me: a collection of robotic faces.
-This gave birth to the idea of the MoodBot, a robotics project which interacts with you and tries to "understand" the mood your are in.
-
-Now the only question was: where and how to get started?
+- early 2025: we finally discussed building something ourselves
+- every good robotics project needs a cute avatar
+- my son drew something for me: a collection of robotic faces
+- gave birth to the idea of the **MoodBot**, a robotics project which interacts with you and tries to "understand" the mood your are in.
+- Now the only question was: where and how to get started?
 -->
 
 ---
@@ -186,19 +179,16 @@ title: My Daily Tech
 So... let's pick Elixir then! 😄
 
 <!--
-My professional background from five clients in 10 years was in four different language ecosystems: Ruby, Python, C, and TypeScript.
-
-During my ruby project years, I learned about the existance of Elixir, and I liked it since then.
-But... Aside from smaller side project and TNG internal workshops, I did no paided programming project using Elixir.
-
-So for the robotics project, I could have just opted it for Python and be probably OK.
-But I actually wanted to build something in Elixir for three main reasons:
-
-1. I still like the language.
-2. I like the foundation it is build on: processes, message passing, GenServers---you name it.
-3. The ecosystem has grown quite a bit over time
-
-And I wanted to explore how far I can come with the part-time knowledge I had.
+- obvious choices would have been an ecosystem where I am fluent in
+- professional background: five clients in 10 years in four different language ecosystems
+- during ruby years, learned about the existance of Elixir, and I liked it since then
+- but: side from smaller side project and TNG internal workshops, I did no paided programming project using Elixir
+- could have just opted it for Python and be probably OK.
+- but: wanted to build something in Elixir for three main reasons
+  1. I still like the language.
+  2. I like the foundation it is build on: processes, message passing, GenServers---you name it.
+  3. The ecosystem has grown quite a bit over time
+- explore how far I can come with my part-time knowledge
 -->
 
 ---
@@ -209,46 +199,27 @@ layout: two-cols
 <div class="flex items-center justify-center">
   <img
     class="w-full"
-    src="/img/andrej-karpathy-vibe-coding.png"
+    src="/img/mcp.png"
   />
 </div>
 
 ::right::
 
-<div class="flex items-center justify-center">
-  <img
-    class="w-75"
-    src="/img/mcp.png"
-  />
-</div>
+<v-click>
+  <div class="flex items-center justify-center">
+    <img
+      class="w-full"
+      src="/img/andrej-karpathy-vibe-coding.png"
+    />
+  </div>
+</v-click>
 
 <!--
-- Earlier this year, I got the confidence push that I needed by the rise of vibe coding and the introduction of MCPs (Model Context Protocol) servers.
+- earlier this year: got confidence push I needed -> MCPs (Model Context Protocol) servers + vibe coding
+- **MCPs**: let AI use hexdocs + github repos as source of truth
+- **vibe coding**: describe plan, let the AI "work for me"
 - was quite excited back then, and I just dove in
-- "maybe I can build this!"
--->
-
----
-title: Elixir Maturity
-disabled: true
----
-
-**What I knew:**
-- Nerves: "Elixir for embedded systems"
-- Bumblebee: "ML models in Elixir"
-
-**What I hadn't done:**
-- Production Elixir ✗
-- Hardware projects ✗
-- Combining them ✗
-
-**The gap:** Knowledge → Experience
-
-<!--
-I'd read  about these tools, done workshops, side projects.
-But never shipped anything real with Elixir.
-Never touched hardware with Elixir.
-This project was my leap from "I know of this" to "I built with this."
+- feeling: "maybe I can build this!"
 -->
 
 ---
@@ -263,18 +234,9 @@ title: The Fuzzy Plan
 </div>
 
 <!--
-TODO Update/simplify speaker notes
-
-So at this point, early 2025, I had this very loose idea.
-I knew I wanted to use the Raspberry Pi I had sitting in a drawer.
-I thought: put a screen on it, let me talk to it or press buttons or something, and then show the robot's reply on that screen.
-
-But honestly? I had no clue about the details.
-What kind of screen? How would the interaction work? What would the robot actually do?
-All of that was completely unclear.
-
-But sometimes you just need to start, even when the plan is fuzzy.
-The clarity comes from building, from hitting problems, from making decisions as you go.
+- early 2025: loose idea -> use RPi from drawer, put a screen on it, let it show moods, and by speech
+- but honestly: No clue about the details
+- sometimes: just start, plan develops in the process
 -->
 
 ---
@@ -289,7 +251,8 @@ layout: section
 <tng-screen-device />
 
 <!--
-Since having visuals early on give the most feeling of progress, we started there.
+- start with the e-ink
+- having visuals early gives good feeling of progress
 -->
 
 ---
@@ -297,11 +260,11 @@ title: Nerves
 layout: two-cols
 ---
 
-<div class="flex flex-col items-center gap-2">
+<!-- <div class="flex flex-col items-center gap-2">
   <img src="/public/img/elixir-nerves-logo.png" alt="Nerves" class="h-15 w-auto" />
 </div>
 
-Craft embedded firmware with Elixir
+Craft embedded firmware with Elixir -->
 
 - Minimal Linux → boots to BEAM
 - Framework: Pre-built libraries for embedded development
@@ -310,8 +273,11 @@ Craft embedded firmware with Elixir
 **Workflow:**
 ```shell
 mix firmware
+mix burn
 mix upload
 ```
+
+over-the-air (OTA) updates ftw!
 
 ::right::
 
@@ -321,15 +287,12 @@ mix upload
 </div>
 
 <!--
-The foundation for this project is Nerves.
-
-Nerves is an Elixir framework specifically built for embedded systems.
-It gives you a minimal Linux distribution that boots straight to the BEAM virtual machine.
-You get pre-built libraries for common embedded tasks, and tooling to build and deploy firmware.
-
-The workflow is straightforward: set your target, run mix firmware to build, mix upload to deploy.
-
-This is a really pleasant workflow.
+- nerves as foundation
+- nerves: Elixir framework specifically built for embedded systems
+- minimal Linux distribution that boots straight to the BEAM VM
+- pre-built libraries for common embedded tasks, and tooling to build and deploy firmware
+- straightforward workflow: set your target, run mix firmware to build, mix upload to deploy.
+- really pleasant
 -->
 
 ---
@@ -356,22 +319,16 @@ layout: two-cols
 </div>
 
 <!--
-TODO [H] Show picture of E-Ink display
 TODO [M] Show dislay initialization structure (GPIO, reset, hal, ...)
 -->
 
 <!--
-So after deciding to focus on displaying moods, I needed to pick a screen.
-I went with a Waveshare 2.9 inch E-Ink display.
-
-Why E-Ink? A couple of reasons.
-First, it looks cool. That paper-like quality just fits the aesthetic I had in mind for a robot face.
-Second, it's low power - once you draw something, it stays there without using energy.
-And third, Waveshare had a Python library for it, which I thought would make porting to Elixir straightforward.
-
-I looked at the Python code and thought: "Yeah, this looks manageable. Just send some commands over SPI, initialize the display, push some pixels. How hard can it be?"
-
-Spoiler alert: it was not straightforward.
+- task: find a screen
+- went with Waveshare 2.9 inch E-Ink
+- why e-ink? looks cool, paper-like quality, nice aesthetics
+- waveshare: existing Python library, small size
+- thought would make porting to Elixir straightforward
+- how hard can it be? -> it was not straightforward
 -->
 
 ---
@@ -431,25 +388,11 @@ Added GenServer + monadic error handling.
 </v-click>
 
 <!--
-TODO [M] For the code highlight: example of how state was spread in the code that we had to manage correctly.
-
-So I started porting the Python driver to Elixir using Claude Code.
-
-On the left, you can see the Python version from Waveshare.
-It's very imperative: call this function, call that function, send some commands, send some data.
-No real state management. Just a sequence of operations that hopefully work.
-
-On the right is my Elixir port, mostly written by Claude Code.
-I guided it toward monadic error handling with those with statements, made some small corrections along the way.
-Every operation explicitly threads the state through, and if anything fails, it short-circuits early with a clear error.
-
-And honestly? Even though Claude wrote most of it, watching it come together felt great!
-The code looked clean, the error handling was explicit, everything seemed to make sense.
-I deployed it to the Raspberry Pi and ran the initialization.
-
-But the display? Just blank.
-
-Alright. Time to debug.
+- described style and scope of the migration to Claude Code
+- let Claude iterate on it
+- imperative with implicit state management -> GenServer plus monadic chaining for improved error handling
+- watching Claude providing this felt great!
+- code looked clean, the error handling was explicit, seemed to make sense
 -->
 
 ---
@@ -461,22 +404,10 @@ title: Great, ... Initially
 </div>
 
 <!--
-And this is where the development experience really shines.
-
-This screenshot shows my actual workflow with Claude Code.
-I'm using two Model Context Protocol servers here: SSH MCP and HexDocs MCP.
-
-With SSH MCP, I can deploy firmware to the Raspberry Pi, run commands remotely, and debug directly on the device - all from within the Claude Code conversation.
-No switching to a terminal. No copy-pasting commands.
-
-With HexDocs MCP, I can look up Elixir library documentation instantly.
-Claude has access to the full Hex documentation, so when I'm working with VintageNet or Circuits.GPIO or whatever, it can pull up the exact function signatures and examples right there.
-
-So the loop becomes: write code, deploy, test, check docs, iterate.
-All in one conversation. No context switching.
-
-This is what made vibe coding actually work for me on this project.
-Without this tight feedback loop, I'm not sure I would have gotten as far as I did.
+- for fast feedback, set up ssh mcp for Claude to execute commands on the RPi
+- loop becomes: write code, deploy, test, check docs, iterate
+- made vibe coding work and pleasant for me
+- got me started really fast
 -->
 
 ---
@@ -511,28 +442,14 @@ end
 </div>
 
 <!--
-So the debugging began.
-
-This was during one of our internal TechDays at TNG - a full day to work on side projects.
-I started early, put the Python code on the left screen, my Elixir code on the right, and started comparing.
-
-Around 10am, I found it.
-One single hex byte - that 0x80 you see highlighted - was in the wrong position in the initialization sequence.
-Everything else was correct. Just that one byte, one command too early.
-
-Here's the thing: the code compiled fine. It ran without errors.
-Claude had ported most of the Python code correctly, but it also forgot things along the way - probably because I didn't give it enough focus or structure the context properly.
-
-This is where I learned something important about working with AI on hardware.
-You can't just accept the output and move on.
-You need to verify each step, understand what each command does, check the timing requirements, validate the initialization sequence.
-
-I had been too trusting.
-The code looked reasonable, so I assumed it was correct.
-That assumption cost me weeks of debugging.
-
-The lesson: break things into smaller steps, verify each piece, and actually understand what you're building.
-Not just for hardware - that applies everywhere.
+- compiled it, uploaded firmware to RPi, ran display code -> **display kept blank**
+- made Claude review its code and double check the implementation -> did not found the issue
+- realized that I needed to manually go through the code and find the issue
+- one tech friday we have, put Python code on the left and Elixir on the right -> went over the code essentially "line by line"
+- found it after multi-hour search: one single hex byte
+- changed it -> worked
+- realization: driver part was packed with parts you need to get right, otherwise nothing works -> either to them myself or have proper guardrails in place
+- lesson and reminder: break things into smaller steps, verify each piece, and actually understand what you're building
 -->
 
 ---
@@ -568,16 +485,20 @@ And looking back... completely overengineered for what I needed at that stage.
 title: "Image Pipeline: The Plan"
 ---
 
+<v-click>
+
 on device:
 
-```mermaid {scale: 0.6, theme: 'neutral'}
+```mermaid {scale: 0.75, theme: 'neutral'}
 graph LR
-    A[PNG Image] --> B[Conversion Pipeline<br/>remove alpha, to b/w,<br/>center, resize]
-    B --> C[pixel data]
+    A[PNG Image] --> B[Conversion Pipeline<br/>remove alpha, b/w,<br/>center, resize]
+    B --> C[Pixel Data]
 
     style A fill:#e1f5ff
     style C fill:#d4edda
 ```
+
+</v-click>
 
 <v-click>
 
@@ -623,26 +544,17 @@ armv7-nerves-linux-gnueabihf-gcc: error: unrecognized command-line option '-flat
 </template>
 </v-switch>
 
-
 <!--
-TODO Make the slide easier to digest. Add more meat to it. Like: Is there something specific I tried that needs to be mentioned?
-
-But before I could even build that testing setup, I needed to get image processing working on the device.
-
-The plan was: take PNG images, run them through a conversion pipeline on the device - remove alpha channel, convert to black and white, center, resize to display dimensions - and then push the pixel data to the E-Ink.
-
-I found a library called vix, which wraps libvips for image processing.
-And actually, the timing was perfect - Nerves support had just been added to the master branch.
-
-So I added it to my mix.exs, tried to build the firmware, and... compilation errors.
-Lots of them.
-
-The error messages showed it was trying to cross-compile native dependencies from macOS to ARM Linux, and the build scripts were injecting macOS-specific flags into the Linux compiler.
-
-I tried forcing builds, setting environment variables, went down GitHub rabbit holes looking for solutions.
-Nothing worked.
-
-This was the first time I really hit the cross-compilation wall with the Elixir ecosystem.
+- display working -> now aim showing the robot faces
+- robot faces are png -> need to convert them to pixel data for the display
+- plan was: convert the images on-the-fly on device
+- just for the kicks, but also for future plans
+- found `vix`, wrapping libvips for image processing
+- the timing was perfect - it just added Nerves support
+- tried build the firmware, and... compilation errors
+- tried cross-compile native dependencies from macOS to ARM Linux, and the build scripts were injecting macOS-specific flags into the Linux compiler
+- tried tried forcing builds, fiddling with env vars, went down GitHub rabbit holes looking for solutions
+- gave up for the moment and tried a different approach
 -->
 
 
@@ -651,21 +563,20 @@ title: "Image Pipeline: The Build"
 layout: two-cols
 ---
 
-<!-- TODO [L] v-top the content -->
-<!-- TODO [L] prettify the mermaid diagrams -- or use excalidraw -->
-
 ::left::
 
 on my laptop:
 
-```mermaid {scale: 0.5, theme: 'neutral'}
+```mermaid {scale: 0.75, theme: 'neutral'}
 graph LR
-    A[PNG Image] --> B[Conversion Pipeline<br/>remove alpha, to b/w,<br/>center, resize]
+    A[PNG Image] --> B[Conversion Pipeline<br/>remove alpha, b/w,<br/>center, resize]
     B --> C[PBM P1 Format]
 
     style A fill:#e1f5ff
-    style C fill:#d4edda
+    style C fill:#00ff00
 ```
+
+<v-click>
 
 ```
 P1
@@ -679,63 +590,58 @@ P1
 1 1 1 0 0 1 1 1
 ```
 
+</v-click>
+
 ::right::
 
 on device:
 
+<div class="mt-5">
 
-```mermaid {scale: 0.5, theme: 'neutral'}
+```mermaid {scale: 0.75, theme: 'neutral'}
 graph LR
-    A[PBM P1 Format] --> B[pixel data]
+    A[PBM P1 Format] --> B[Pixel Data]
 
-    style A fill:#d4edda
-    style B fill:#e1f5ff
+    style A fill:#00ff00
+    style B fill:#d4edda
 ```
 
-<v-switch>
-<template #1>
+</div>
+
+<div v-click class="mt-6">
+
 ```elixir
 pbm
    # process chunks of eight 0s and 1s
 |> Enum.chunk_every(8)
-   # and pack them properly aligned into bytes
+   # pack them aligned into bytes
 |> Enum.map(&pack_pixels_in_byte/1)
    # finally, make it into a binary
 |> :binary.list_to_bin()
 ```
-</template>
 
-<template #2>
-<img
-  class="w-70"
-  src="/img/e-ink moody 1.jpg"
-/>
-</template>
-
-</v-switch>
+</div>
 
 <!--
-So I pivoted.
-
-Instead of doing image conversion on the device, I moved it to the host.
-On my development machine, I run the PNG through the conversion pipeline - remove alpha, convert to black and white, center, resize - and save it as a PBM P1 file.
-
-PBM P1 is about as simple as an image format gets.
-It's just plain text: width, height, and then 0s and 1s for black and white pixels.
-It is just a great format for visual inspection while being absolutely easy to convert to actual pixel data for the display.
-
-Then on the device, I just need to read that file, chunk the pixel data into groups of eight, pack them into bytes, and send it to the display.
-No image processing libraries needed. Just Elixir's Enum and binary handling.
-
-The trade-off is clear: I can't dynamically generate or transform images on the device anymore.
-But I can ship pre-processed robot faces and display them reliably.
-
-And you know what? It works.
-Working beats not working.
-
-This is where I started to really understand the "keep it simple" principle.
-Not because I wanted to, but because the complex solution just wouldn't compile.
+- so I pivoted, moving the image conversion to device to my laptop
+- while reusing most of the code necessary for building it on device someday
+- aimed to store the pixel data in a format that easy to debug *and* is easy to parse on device
+- on device: just need to read file, chunk pixel data into groups of eight, pack into bytes, and send to display
+- working beats not working
+- limited time -> keep it simple
 -->
+
+---
+title: "Image Pipeline: The Build"
+---
+
+<div class="flex items-center justify-center">
+  <img
+    class="h-100"
+    src="/img/moodbot-e-ink-face.jpg"
+  />
+</div>
+
 
 ---
 title: Focus Recalibration
@@ -798,16 +704,11 @@ layout: section
 <tng-microphone />
 
 <!--
-So let's recap where we are.
-
-We've got the E-Ink display working. It can show robot faces.
-We've learned some hard lessons about AI code generation and hardware debugging.
-We've refocused on the core interaction: someone talks to the robot, it responds with emotion.
-
-But right now, the robot is silent. It can't hear anything, and it can't speak.
-
-So this next part is about bringing sound and intelligence into the mix.
-We need to capture audio, understand what's being said, figure out the emotional tone, generate a response, and speak it back.
+- learned some lessons the hard way
+- shift approach, start simple
+- refocus on core interaction: talk to robot, it responds with emotion
+- next part:  bring sound and intelligence to the robot
+- need to capture audio, understand what's being said, figure out the emotional tone, generate a response, and speak it back.
 -->
 
 ---
@@ -840,24 +741,11 @@ iex(3)> System.cmd("aplay", [Path.join(:code.priv_dir(:mood_bot), "assets/audio/
 </v-click>
 
 <!--
-- simple experiments first, then spoonfeed the AI to build the full solution
+- simple experiments first, then spoonfed the AI to build the full solution
 - connected speakers to RPi
-- quick search showed that Nerves for RPi already comes with audio support
-
-So now with the display working and my scope refocused, I moved on to getting audio working.
-
-The hardware setup was straightforward - I just plugged a stereo speaker into the Raspberry Pi's 3.5mm audio jack.
-Nothing fancy, just a basic speaker.
-
-And for once, the software side was refreshingly simple too.
-Nerves for Raspberry Pi 3 comes with ALSA audio support built in, so I SSH'd into the device to test it.
-
-I checked what audio controls were available with amixer, saw there was a PCM control, set the volume to 100%, and then just played a sample WAV file using aplay.
-
-And it worked. Just like that.
-No compilation issues, no missing drivers, no configuration headaches.
-
-After all the E-Ink debugging and the vix cross-compilation struggles, it was nice to have something just work on the first try.
+- quick search showed that Nerves for RPi already comes with audio (ALSA) support 
+- just worked -> refreshing after vix compilation struggles
+- faq: uses Elixir ports to stream audio to aplay
 -->
 
 ---
@@ -876,7 +764,7 @@ Next task: **text-to-speech (TTS)**, **text generation**, and **speech-to-text (
 
 <div class="flex items-center justify-center">
   <img
-    class="w-180"
+    class="w-full"
     src="/img/moodbot-ml-pipeline.excalidraw.svg"
   />
 </div>
@@ -884,18 +772,10 @@ Next task: **text-to-speech (TTS)**, **text generation**, and **speech-to-text (
 </v-click>
 
 <!--
-So with audio working, I needed to add intelligence to the robot.
-
-For that, I wanted to use Bumblebee.
-Bumblebee is an Elixir library that lets you load pre-trained machine learning models from Hugging Face and run them directly in your Elixir application.
-
-No need to shell out to Python, no separate services - it all runs on the BEAM.
-The library provides complete pipelines for natural language processing and computer vision tasks.
-
-For MoodBot, this seemed perfect.
-I could run all the ML models I needed on-device - speech recognition, sentiment analysis, response generation - all in Elixir.
-
-At least, that was the idea.
+- with audio working -> add intelligence to the robot
+- Bumblebee: go-to Elixir library to load pre-trained ML models from Hugging Face and run them directly in your Elixir application
+- **No need to shell out to Python**, no separate services
+- whisper for live translation, RoBERTa based model for emotion analysis, and model like Llama for text gen
 -->
 
 ---
@@ -921,26 +801,9 @@ title: "On-Device TTS?"
 
 Thus: go for Cloud TTS (Azure AI Speech) for now
 
-<!--
-So audio playback works great, but now I needed text-to-speech.
-I wanted the robot to be able to speak responses back to my son.
-
-My preference was to do everything on-device.
-Keep it all self-contained, no cloud dependencies, everything running locally on the Raspberry Pi.
-
-I looked into what's available in the Elixir ecosystem.
-Bumblebee can serve ML models on-device, which would be perfect for this.
-But when I checked what TTS models are supported... I found an open issue requesting TTS support, but nothing implemented yet.
-
-So I went with the practical solution: cloud TTS using Azure AI Speech.
-It works, it's reliable, and it let me keep making progress.
-
-Would I prefer on-device TTS? Sure.
-But for now, this gets the job done.
--->
-
 ---
 title: "Small Language Models (SLMs)"
+layout: two-cols
 ---
 
 **Text Generation**
@@ -949,7 +812,7 @@ title: "Small Language Models (SLMs)"
 - But **not supported yet** ([Bumblebee issue #423](https://github.com/elixir-nx/bumblebee/pull/423))
 - Used: **SmolLM 2** (up to 1.7B) and **Llama 3.2** (1B)
 
-<v-click>
+<v-click at="2">
 
 **Sentiment Analysis**
 
@@ -958,29 +821,27 @@ title: "Small Language Models (SLMs)"
 
 </v-click>
 
+::right::
+
+<v-click at="1">
+  <div class="flex flex-col items-center gap-2">
+    <img src="/img/slm-model-performance-rpi5.png" alt="SLM Performance on RPi5" class="w-full" />
+    <p class="text-xs text-gray-500 mt-2">
+      Source: <a href="https://www.stratosphereips.org/blog/2025/6/5/how-well-do-llms-perform-on-a-raspberry-pi-5" target="_blank">Stratosphere Lab - How Well Do LLMs Perform on a Raspberry Pi 5?</a>
+    </p>
+  </div>
+</v-click>
+
 <!--
-- Switch: RPi 3 -> RPi 5 (16GB)
-
-So with the VM build setup working, I could finally start running models on the device.
-
-For model selection, I quickly learned that your choices in Bumblebee are limited.
-I wanted to try newer models like Gemma 3, DeepSeek, or Qwen, but they're not supported yet.
-So I worked with what was available: SmolLM 2 and Llama 3.
-
-But as I was looking at these models, I realized they were too big for the Raspberry Pi 3.
-Not enough RAM, not enough compute power for real-time inference.
-So I upgraded to a Raspberry Pi 5 with 16GB of RAM - basically maxed out the hardware.
-
-I also started exploring the HAILO HAT for AI acceleration.
-It's promising hardware, but the ecosystem support is still early days.
-
-For the sentiment analysis part, I used a German-emotions RoBERTa model.
-It takes text and outputs scores for 8 different emotions.
-I map those 8 emotions down to the 5 mood faces my son drew: happy, affirmation, skeptic, surprised, and crying.
-
-And this part actually worked really well.
-The sentiment pipeline does exactly what I need - it takes what someone says and figures out what emotion the robot should display.
-This is the emotional intelligence of MoodBot.
+- brief model research: what's supported by Bumblebee to date
+- aimed for capable model families like Gemma or DeepSeek -- but they're not supported yet.
+- nice blog posts exist out there benchmarking different models on the RPi platform
+- performance = measure of quality (execution grade on real-world tasks)
+- token/sec = measure of speed
+- ideally: opt for top-right corner
+- worked with what was available: SmolLM 2 and Llama 3
+- had to ditch my RPi 3 for a new RPi 5 (16GB) to actually load and run multiple models
+- sentiment analysis part: RoBERTa model: text -> scores for 8 different emotions.
 -->
 
 ---
@@ -1030,35 +891,17 @@ Rust build scripts inject macOS flags into Linux compiler.
 </v-click>
 
 <!--
-So with TTS sorted out using Azure, I turned to the other models I wanted to run on-device.
+Bumblebee with two key dependencies:
 
-I needed Whisper for speech-to-text, so the robot could understand what my son was saying.
-And I wanted a text generation model like Llama 3 to generate responses.
+**Nx**: The numerical computing library that actually runs the ML models - handles tensors, matrix operations, all the mathematical heavy lifting
 
-But to run these with Bumblebee on the Raspberry Pi, I needed two key dependencies:
-- Nx: The numerical computing library that actually runs the ML models - handles tensors, matrix operations, all the mathematical heavy lifting
-- Tokenizers: Elixir bindings for Hugging Face's Rust-based tokenizers. These convert text into numerical representations that models can process. For example, "Hello there!" becomes tokens ["Hello", "there", "!"] which get converted to numerical IDs [8667, 1175, 106].
+**Tokenizers**: Elixir bindings for Hugging Face's Rust-based tokenizers. convert text into numerical representations models can understand
 
-Both of these have Rust components that need to be compiled for ARM Linux to run on the Pi.
-This is where I ran into the same problem I had with vix before.
-
-I was building on macOS, targeting ARM Linux on the Pi.
-And the Rust build scripts kept injecting macOS-specific compiler flags - things like "mmacosx-version-min" - into what should have been a Linux build.
-
-I tried different approaches - adjusting environment variables, forcing clean builds, searching through GitHub issues.
-But I couldn't get it to work.
-
-At this point I was exploring AI acceleration hardware for the Pi, looking at the HAILO HAT.
-And in that repository I found a solution people were using: run the builds in a Linux VM instead of on macOS directly.
-
-So I set up an Ubuntu VM and moved my build process there.
-And it worked.
-
-But now instead of 10-second rebuilds, I was waiting 5 to 10 minutes for each firmware build.
-That quick iteration cycle I'd been enjoying? It was gone.
-
-This cross-compilation challenge is something you'll likely run into if you're combining Nerves with Bumblebee.
-It's one of those areas where the tooling hasn't quite caught up yet.
+- ran into same problem as as with vix: cross-compilation issues
+- Rust build scripts injecting macOS-specific compiler flags - things like "mmacosx-version-min" - into what should have been a Linux build
+- tried adjusting environment variables, forcing clean builds, searching GitHub issues
+- but now instead of sub-minute rebuilds, I have 15ish minutes builds
+- quick iteration cycle gone for the moment
 -->
 
 ---
@@ -1108,44 +951,13 @@ text =
 </v-click>
 
 <!--
-Now I needed to actually capture audio from a microphone so the robot could listen.
-
-I went with Membrane for the audio pipeline because the plugin ecosystem is really rich.
-There are plugins for pretty much everything you need - audio sources, sinks, encoders, processors.
-
-But instead of just capturing audio to a file, I wanted streaming transcription.
-The idea is to get progressive results as someone is talking, rather than waiting for them to finish completely.
-
-So the pipeline works like this:
-PortAudio captures from the microphone in 16kHz mono.
-The AudioChunker splits it into 5-second chunks.
-Each chunk gets fed to the WhisperSink, which runs Whisper transcription via Bumblebee.
-
-The clever bit is that Bumblebee accumulates these 5-second chunks into 30-second windows with 5-second overlaps.
-This means you get progressive transcription without losing context between chunks.
-
-On the right, you can see how the Whisper transcription actually works.
-We read the raw PCM audio binary, and here's that elegant binary pattern matching again - converting signed 16-bit little-endian samples into normalized floats in one line.
-
-Let me explain what's happening here, because this is a standard pattern for audio ML models.
-The microphone gives us s16le format - signed 16-bit integers ranging from -32,768 to +32,767.
-But machine learning models expect normalized floating-point inputs.
-Specifically, Whisper's feature extractor needs values between -1.0 and 1.0.
-
-So we divide each sample by 32,768.
-That normalizes the full range: 32,767 becomes approximately 1.0, and -32,768 becomes exactly -1.0.
-
-Then we create an Nx tensor from those normalized samples.
-Nx is Elixir's numerical computing library - think of tensors as multi-dimensional arrays optimized for ML operations.
-Bumblebee's Whisper serving expects this Nx tensor format as input.
-And it enables GPU acceleration through the EXLA compiler.
-
-We pass the tensor to Bumblebee serving, Whisper processes it, and returns chunks of transcribed text which we join together.
-
-All of this running on-device with the Whisper Tiny model.
-
-So now I had streaming audio transcription working.
-But I still needed a way to actually trigger the recording.
+- needed to capture audio from a mic so the robot could listen
+- **membrane** framework for audio pipeline because the plugin ecosystem is really rich
+- PortAudio captures from the microphone in 16kHz mono with the sampling setting expected by Whisper
+- Whisper otherwise internally converts it to this format anyway
+- elegant binary pattern matching: converting signed 16-bit little-endian samples into normalized floats in one line
+- create an Nx tensor (like multi-dimensional array for ML ops) from those normalized samples
+- pass tensor to Bumblebee serving, Whisper processes it, returns chunks of transcribed text
 -->
 
 ---
@@ -1157,13 +969,18 @@ Missing link: How to **start/stop** the audio pipleline?
 
 ::left::
 
-<AutoFitImg src="public/img/Button Test Circuit.jpg" alt="Button Test Circuit" />
+<div class="flex items-center justify-center">
+  <img
+    class="w-full"
+    src="/img/Button Test Circuit.jpg"
+  />
+</div>
 
 ::right::
 
 <div class="flex items-center justify-center">
   <img
-    class="h-100 -mt-12"
+    class="w-full -mt-12"
     src="/img/Arduino button test setup - light.png"
   />
 </div>
@@ -1195,16 +1012,11 @@ Learning together beats learning alone.
 title: "Putting It All Together"
 ---
 
-TODO Demo Video
-
-<!--
-And here it is in action.
-
-My son talking to MoodBot - you can see the mood displayed and hear the response.
-
-From "Can we build a robot?" to this.
--->
-
+<div class="flex items-center justify-center">
+  <SlidevVideo controls muted class="h-100">
+    <source src="/img/moodbot-full-pipeline.mov" type="video/quicktime" />
+  </SlidevVideo>
+</div>
 
 ---
 layout: section
