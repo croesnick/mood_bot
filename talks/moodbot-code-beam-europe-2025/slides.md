@@ -754,22 +754,12 @@ title: "On-Device ML with Bumblebee"
 
 Next task: **text-to-speech (TTS)**, **text generation**, and **speech-to-text (STT)**
 
-<v-click>
-
-**Bumblebee:** Pre-trained ML models in Elixir
-
-</v-click>
-
-<v-click>
-
-<div class="flex items-center justify-center">
+<div class="flex items-center justify-center mt-24">
   <img
     class="w-full"
     src="/img/moodbot-ml-pipeline.excalidraw.svg"
   />
 </div>
-
-</v-click>
 
 <!--
 - with audio working -> add intelligence to the robot
@@ -851,13 +841,7 @@ layout: two-cols
 
 Bumblebee needs **Nx** (numerical computing) + **Tokenizers** (text -> numbers for AI).
 
-<v-click>
-
 **Problem:** Need these on-device (ARM Linux). Cross-compile from macOS → same issue as vix.
-
-</v-click>
-
-<v-click>
 
 **Attempt:** Cross-compile from macOS to Linux ARM.
 
@@ -867,17 +851,9 @@ aarch64-nerves-linux-gnu-gcc: error:
 ```
 Rust build scripts inject macOS flags into Linux compiler.
 
-</v-click>
-
-<v-click>
-
 **Attempts:** Force builds, env vars, GitHub rabbit holes. Nothing worked.
 
-</v-click>
-
 ::right::
-
-<v-click>
 
 **Solution:** Build VM - suggestion from [`nx_hailo` repo](https://github.com/vittoriabitton/nx_hailo).
 
@@ -887,8 +863,6 @@ Rust build scripts inject macOS flags into Linux compiler.
     src="/img/utm.png"
   />
 </div>
-
-</v-click>
 
 <!--
 Bumblebee with two key dependencies:
@@ -913,7 +887,7 @@ layout: two-cols
 
 **Streaming Audio Pipeline**
 
-```elixir {all|1-5|6-8|9-12|all}
+```elixir
 child(:mic, %Membrane.PortAudio.Source{
   sample_format: :s16le,
   sample_rate: 16_000,
@@ -931,14 +905,12 @@ child(:mic, %Membrane.PortAudio.Source{
 
 **Whisper Transcription**
 
-```elixir {hide|all|3-5|7-9|10-14}
-# Read & convert audio
+```elixir {hide|all|3-7}
 {:ok, raw_data} = File.read(file_path)
 
 samples = for <<sample::signed-little-16 <- raw_data>>,
   do: sample / 32768.0
 
-# Transcribe via Bumblebee
 tensor = Nx.tensor(samples, type: :f32)
 result = Nx.Serving.batched_run(WhisperServing, tensor)
 
@@ -986,6 +958,8 @@ Missing link: How to **start/stop** the audio pipleline?
 </div>
 
 <!--
+- button press triggers pipeline
+
 So I had audio capture working, but I needed a way to trigger it.
 The robot needed to know when to start listening.
 
@@ -1013,7 +987,7 @@ title: "Putting It All Together"
 ---
 
 <div class="flex items-center justify-center">
-  <SlidevVideo controls muted class="h-100">
+  <SlidevVideo controls muted="false" class="h-100">
     <source src="/img/moodbot-full-pipeline.mov" type="video/quicktime" />
   </SlidevVideo>
 </div>
@@ -1071,5 +1045,23 @@ And building this with my son made it worthwhile.
 
 ---
 layout: speaker
-# image: ""
+disabled: true
 ---
+
+---
+title: MoodBot says ty 🤖 and wishes a great conference
+---
+
+<div class="grid grid-cols-2 gap-10 mt-8">
+  <div class="flex flex-col items-center">
+    <QrCode style="width: 256px;" value="https://github.com/croesnick/mood_bot" />
+    <p class="text-center mt-4 text-2xl">GitHub repository</p>
+  </div>
+  <div class="flex flex-col items-center">
+    <img
+      class="h-76 -mt-5"
+      src="/img/code-beam-europe-2025-feedback-qrcode.png"
+    />
+    <p class="text-center mt-4 text-2xl">Feedback about the talk</p>
+  </div>
+</div>
