@@ -26,7 +26,7 @@ config :nerves, :firmware, rootfs_overlay: "rootfs_overlay"
 
 config :nerves, source_date_epoch: "1751257577"
 
-config :membrane_core, :logger, verbose: true
+config :membrane_core, :logger, verbose: false
 
 if Mix.target() == :host do
   import_config "host.exs"
