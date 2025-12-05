@@ -94,8 +94,6 @@ defmodule MoodBot.Display.RpiHAL do
   end
 
   defp spi_write_chunk(state, data) do
-    Logger.debug("SPI: Writing chunk of #{byte_size(data)} bytes")
-
     case SPI.transfer(state.spi, data) do
       {:ok, _response} ->
         {:ok, state}
@@ -111,8 +109,6 @@ defmodule MoodBot.Display.RpiHAL do
   end
 
   defp spi_write_chunked(state, data, _chunk_size) do
-    Logger.debug("SPI: Chunked write of #{byte_size(data)} bytes in chunks")
-
     result = spi_write_chunks(state, data, min(SPI.max_transfer_size(state.spi), 4000), 0)
 
     # Post-transfer settling delay to allow display controller to process complete transfer
@@ -127,7 +123,7 @@ defmodule MoodBot.Display.RpiHAL do
     end
   end
 
-  defp spi_write_chunks(state, data, chunk_size, offset) when offset >= byte_size(data) do
+  defp spi_write_chunks(state, data, _chunk_size, offset) when offset >= byte_size(data) do
     {:ok, state}
   end
 

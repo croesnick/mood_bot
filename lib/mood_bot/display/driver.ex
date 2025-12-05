@@ -417,8 +417,6 @@ defmodule MoodBot.Display.Driver do
   between commands to prevent display corruption.
   """
   defp wait_until_idle_hal(hal, hal_state, timeout_ms \\ 15_000) do
-    Logger.debug("Driver: Busy")
-
     case wait_until_idle_loop(hal, hal_state, timeout_ms, System.monotonic_time(:millisecond)) do
       {:ok, new_hal_state} ->
         {:ok, new_hal_state}
@@ -442,7 +440,6 @@ defmodule MoodBot.Display.Driver do
     else
       case hal.gpio_read_busy(hal_state) do
         {:ok, 0, hal_state} ->
-          Logger.debug("Driver: Ready (idle)")
           {:ok, hal_state}
 
         {:ok, 1, hal_state} ->
@@ -456,8 +453,6 @@ defmodule MoodBot.Display.Driver do
   end
 
   defp send_command_hal(hal, hal_state, command) when is_integer(command) do
-    Logger.debug("Driver: Sending command 0x#{Integer.to_string(command, 16)}")
-
     # FIXME Instead of gpio_set_dc, we could have a hal.gpio_set_command_mode/1.
     #       And similarly, a hal.gpio_set_data_mode/1.
     #       Or clarify if these helper functions should exist on the driver side.
@@ -468,8 +463,6 @@ defmodule MoodBot.Display.Driver do
   end
 
   defp send_data_hal(hal, hal_state, data) when is_binary(data) do
-    Logger.debug("Driver: Sending #{byte_size(data)} bytes of data")
-
     with {:ok, hal_state} <- hal.gpio_set_dc(hal_state, 1),
          {:ok, hal_state} <- hal.spi_write(hal_state, data) do
       {:ok, hal_state}
@@ -478,13 +471,6 @@ defmodule MoodBot.Display.Driver do
 
   # Set the memory area for writing.
   defp set_memory_area_hal(hal, hal_state, x_start, y_start, x_end, y_end) do
-    Logger.debug("Driver: Setting memory area",
-      x_start: x_start,
-      y_start: y_start,
-      x_end: x_end,
-      y_end: y_end
-    )
-
     with {:ok, hal_state} <-
            send_command_hal(hal, hal_state, @command_set_ram_x_address_start_end_position),
          {:ok, hal_state} <- send_data_hal(hal, hal_state, <<x_start >>> 3 &&& 0xFF>>),
@@ -501,11 +487,6 @@ defmodule MoodBot.Display.Driver do
 
   # Set the memory pointer for writing.
   defp set_memory_pointer(hal, hal_state, x, y) do
-    Logger.debug("Driver: Setting memory pointer",
-      x: x,
-      y: y
-    )
-
     with {:ok, hal_state} <- send_command_hal(hal, hal_state, @command_set_ram_x_address_counter),
          # highest 3 bits are ignored
          {:ok, hal_state} <- send_data_hal(hal, hal_state, <<x &&& 0xFF>>),

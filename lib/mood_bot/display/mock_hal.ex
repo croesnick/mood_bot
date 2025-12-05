@@ -72,14 +72,7 @@ defmodule MoodBot.Display.MockHAL do
 
   @impl true
   def spi_write(state, data) when is_binary(data) do
-    data_size = byte_size(data)
-
-    Logger.debug(
-      "MockHAL: SPI write #{data_size} bytes: #{inspect(binary_part(data, 0, min(8, data_size)))}..."
-    )
-
     new_state = maybe_save_bitmap(state, data)
-
     {:ok, new_state}
   end
 
@@ -118,20 +111,12 @@ defmodule MoodBot.Display.MockHAL do
 
   @impl true
   def gpio_set_dc(state, value) when value in [0, 1] do
-    Logger.debug(
-      "MockHAL: Set DC pin to #{value} (#{if value == 1, do: "data", else: "command"} mode)"
-    )
-
     new_state = %{state | dc_state: value}
     {:ok, new_state}
   end
 
   @impl true
   def gpio_set_rst(state, value) when value in [0, 1] do
-    Logger.debug(
-      "MockHAL: Set RST pin to #{value} (#{if value == 1, do: "inactive", else: "active"})"
-    )
-
     new_state = %{state | rst_state: value}
     {:ok, new_state}
   end
@@ -140,11 +125,6 @@ defmodule MoodBot.Display.MockHAL do
   def gpio_read_busy(state) do
     # Simulate busy pin behavior - randomly return 0 (not busy) most of the time
     busy_value = if :rand.uniform(10) == 1, do: 1, else: 0
-
-    Logger.debug(
-      "MockHAL: Read BUSY pin: #{busy_value} (#{if busy_value == 1, do: "busy", else: "ready"})"
-    )
-
     new_state = %{state | busy_state: busy_value}
     {:ok, busy_value, new_state}
   end
@@ -157,7 +137,6 @@ defmodule MoodBot.Display.MockHAL do
 
   @impl true
   def sleep(milliseconds) when is_integer(milliseconds) and milliseconds >= 0 do
-    Logger.debug("MockHAL: Sleeping for #{milliseconds}ms")
     Process.sleep(milliseconds)
     :ok
   end
