@@ -12,12 +12,21 @@ defmodule MoodBot.STT.Manager do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  def start_recording do
-    GenServer.call(__MODULE__, :start_recording)
+  def start_recording(device_id \\ :default) do
+    GenServer.call(__MODULE__, {:start_recording, device_id})
   end
 
   def stop_recording do
     GenServer.call(__MODULE__, :stop_recording, 30_000)
+  end
+
+  @doc """
+  Stops recording and returns transcription with file path (for testing).
+  Unlike stop_recording/0, this keeps the file for inspection/playback.
+  Returns {:ok, text, file_path} or {:error, reason}.
+  """
+  def stop_recording_and_keep_file do
+    GenServer.call(__MODULE__, :stop_recording_and_keep_file, 30_000)
   end
 
   # Server Callbacks
@@ -28,21 +37,21 @@ defmodule MoodBot.STT.Manager do
   end
 
   @impl true
-  def handle_call(:start_recording, _from, %{recording: false} = state) do
+  def handle_call({:start_recording, device_id}, _from, %{recording: false} = state) do
     file_path = "/tmp/recording_#{System.system_time(:second)}.raw"
 
     {:ok, _sup, pipeline_pid} =
-      Membrane.Pipeline.start_link(MoodBot.STT.RecordingPipeline, file_path)
+      Membrane.Pipeline.start_link(MoodBot.STT.RecordingPipeline, {file_path, device_id})
 
     Process.monitor(pipeline_pid)
 
-    Logger.info("Started recording to #{file_path}")
+    Logger.info("Started recording to #{file_path} with device #{inspect(device_id)}")
 
     {:reply, :ok, %{state | recording: true, pipeline_pid: pipeline_pid, file_path: file_path}}
   end
 
   @impl true
-  def handle_call(:start_recording, _from, %{recording: true} = state) do
+  def handle_call({:start_recording, _device_id}, _from, %{recording: true} = state) do
     {:reply, {:error, :already_recording}, state}
   end
 
@@ -60,6 +69,23 @@ defmodule MoodBot.STT.Manager do
 
   @impl true
   def handle_call(:stop_recording, _from, %{recording: false} = state) do
+    {:reply, {:error, :not_recording}, state}
+  end
+
+  @impl true
+  def handle_call(:stop_recording_and_keep_file, _from, %{recording: true} = state) do
+    Membrane.Pipeline.terminate(state.pipeline_pid)
+
+    {:ok, text} = MoodBot.STT.Whisper.transcribe_file(state.file_path)
+
+    Logger.info("Transcription: #{text}")
+    Logger.info("Audio file kept at: #{state.file_path}")
+
+    {:reply, {:ok, text, state.file_path}, %{state | recording: false, pipeline_pid: nil, file_path: nil}}
+  end
+
+  @impl true
+  def handle_call(:stop_recording_and_keep_file, _from, %{recording: false} = state) do
     {:reply, {:error, :not_recording}, state}
   end
 

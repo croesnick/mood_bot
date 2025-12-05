@@ -9,9 +9,10 @@ defmodule MoodBot.STT.RecordingPipeline do
   require Logger
 
   @impl true
-  def handle_init(_ctx, output_file) do
+  def handle_init(_ctx, {output_file, device_id}) do
     spec = [
       child(:source, %Membrane.PortAudio.Source{
+        device_id: device_id,
         sample_format: :s16le,
         sample_rate: 16_000,
         channels: 1
@@ -21,7 +22,13 @@ defmodule MoodBot.STT.RecordingPipeline do
       })
     ]
 
-    {[spec: spec], %{output_file: output_file}}
+    {[spec: spec], %{output_file: output_file, device_id: device_id}}
+  end
+
+  # Keep backward compatibility with single argument
+  @impl true
+  def handle_init(_ctx, output_file) when is_binary(output_file) do
+    handle_init(nil, {output_file, :default})
   end
 
   @impl true
