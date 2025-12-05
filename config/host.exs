@@ -29,7 +29,15 @@ config :mood_bot, MoodBot.Display,
   busy_gpio: {"gpiochip0", 24},
   pwr_gpio: {"gpiochip0", 18}
 
-config :mood_bot, MoodBot.Display.Driver, hal_module: MoodBot.Display.MockHAL
+config :mood_bot, MoodBot.Display.Driver,
+  hal_module: MoodBot.Display.MockHAL,
+  spi_device: "mock_spi",
+  gpio: %{
+    dc_gpio: {"mock", 0},
+    rst_gpio: {"mock", 0},
+    busy_gpio: {"mock", 0},
+    pwr_gpio: {"mock", 0}
+  }
 
 config :nerves_runtime,
   kv_backend:
