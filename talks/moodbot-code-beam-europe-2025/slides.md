@@ -18,13 +18,6 @@ subheading: "Raising a Tiny Robot With Elixir, Nerves, and AI"
 background: "neuralnet"
 ---
 
-<!--
-Yeah, hello everybody!
-It's great having you all here today.
-This is my talk. It's about rising a tiny robot with Elixir, Nerves, and AI.
-And it is a story about hardware, struggle, relief, and experiences with tooling and Elixir ecosystem as a whole.
--->
-
 ---
 title: "Hi, I am Carsten. 👋"
 ---
@@ -44,7 +37,7 @@ title: "Hi, I am Carsten. 👋"
 <!--
 - I'm Carsten
 - studied computer science, and did my PhD in mathematics over 10 years ago
-- 2015: joined TNG, a software consultantcy with 900+ employees, founded 25 years ago in Munich, with a couple of international offices by now
+- 2015: joined TNG, software consultancy, 900+ employees, founded 25 years ago in Munich, international offices
 - father of two boys, 7 and 9 years old
 - my older son asked me a while ago: can we build a robot ourselves? The robot should be able to move and also talk to me!
 - That didn’t just come out of nowhere.
@@ -61,8 +54,8 @@ layout: section
 <tng-lightbulb />
 
 <!--
-Instead, this was a topic for us brewing up over a longer time by then.
-So this is my story of how I responded.
+- topic brew for a longer time
+- this is the story how I responded
 -->
 
 ---
@@ -77,15 +70,10 @@ title: "The Spark (2020)"
 </div>
 
 <!--
-The whole interest of my older son in robots started a while ago.
-He was always interested in technical stuff
-And roughly 5 years ago, he got his first toy robot. 
-
-This robot was cute, but not really capable.
-It was able to follow you if you pressed a button on the remote and do some dances and noise that was pre-programmed.
-That's it.
-
-So the interest in this robot was lost quite quickly.
+- 2020: toy robot as a gift
+- could follow the remote, some dances, some sounds
+- not programmable, nothing to tinker with
+- interest was lost quite fast
 -->
 
 ---
@@ -93,7 +81,7 @@ title: "The Spark (2022)"
 ---
 
 <div class="flex items-center justify-center">
-  <SlidevVideo controls muted class="h-90">
+  <SlidevVideo controls muted autoplay=true class="h-90">
     <source src="/img/Robotic Arm.mov" type="video/quicktime" />
   </SlidevVideo>
 </div>
@@ -987,7 +975,7 @@ title: "Putting It All Together"
 ---
 
 <div class="flex items-center justify-center">
-  <SlidevVideo controls muted="false" class="h-100">
+  <SlidevVideo controls muted=false autoreset="slide" class="h-95">
     <source src="/img/moodbot-full-pipeline.mov" type="video/quicktime" />
   </SlidevVideo>
 </div>
