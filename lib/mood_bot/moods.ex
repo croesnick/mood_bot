@@ -29,14 +29,29 @@ defmodule MoodBot.Moods do
       "assets/moods/robot-face-angry.pbm"
   """
   @spec file_path(sentiment()) :: String.t()
-  def file_path(:happy), do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-happy.pbm")
-  def file_path(:affirmation), do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-approval.pbm")
-  def file_path(:skeptic), do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-skeptic.pbm")
-  def file_path(:surprised), do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-surprise.pbm")
-  def file_path(:crying), do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-crying.pbm")
-  def file_path(:angry), do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-angry.pbm")
-  def file_path(:error), do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-shocked.pbm")
-  def file_path(_), do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-approval.pbm")
+  def file_path(:happy),
+    do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-happy.pbm")
+
+  def file_path(:affirmation),
+    do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-approval.pbm")
+
+  def file_path(:skeptic),
+    do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-skeptic.pbm")
+
+  def file_path(:surprised),
+    do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-surprise.pbm")
+
+  def file_path(:crying),
+    do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-crying.pbm")
+
+  def file_path(:angry),
+    do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-angry.pbm")
+
+  def file_path(:error),
+    do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-shocked.pbm")
+
+  def file_path(_),
+    do: Path.join(:code.priv_dir(:mood_bot), "assets/moods/robot-face-approval.pbm")
 
   @doc """
   Returns a list of all valid sentiment atoms.

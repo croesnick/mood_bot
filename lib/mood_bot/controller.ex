@@ -87,7 +87,9 @@ defmodule MoodBot.Controller do
   @impl true
   def init(_opts) do
     Logger.info("Controller: Ready")
-    {:ok, %{state: :idle, conversation_history: [], recording_timer_ref: nil}, {:continue, :init_display}}
+
+    {:ok, %{state: :idle, conversation_history: [], recording_timer_ref: nil},
+     {:continue, :init_display}}
   end
 
   @impl true

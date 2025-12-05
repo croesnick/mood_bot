@@ -4,12 +4,7 @@ defmodule MoodBot.MixProject do
   @app :mood_bot
   @version "0.1.0"
   @all_targets [
-    :rpi0,
-    :rpi3,
-    :rpi3a,
-    :rpi4,
-    :rpi5,
-    :x86_64
+    :rpi5
   ]
 
   def project do
